@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Feed from "./pages/Feed";
+import PostDetail from "./pages/PostDetail";
 import Profile from "./pages/Profile";
 import Notifications from "./pages/Notifications";
 import Announcements from "./pages/Announcements";
@@ -32,6 +33,7 @@ const App = () => (
             
             {/* Main App Routes */}
             <Route path="/feed" element={<Feed />} />
+            <Route path="/post/:postId" element={<PostDetail />} />
             <Route path="/korums" element={<Korums />} />
             <Route path="/messages" element={<Messages />} />
             <Route path="/announcements" element={<Announcements />} />
