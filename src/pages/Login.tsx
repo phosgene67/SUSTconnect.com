@@ -63,7 +63,7 @@ export default function Login() {
       <div className="w-full max-w-md">
         {/* Logo and branding */}
         <div className="text-center mb-8">
-          <img src={logo} alt={APP_NAME} className="h-24 w-auto mx-auto mb-4" />
+          <img src={logo} alt={APP_NAME} className="h-36 w-auto mx-auto mb-4" />
           <p className="text-muted-foreground mt-1">
             Your private academic community
           </p>
