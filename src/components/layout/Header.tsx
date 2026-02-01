@@ -4,10 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { APP_NAME } from '@/lib/constants';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUnreadNotificationCount } from '@/hooks/useNotifications';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export function Header() {
   const { user, profile } = useAuth();
+  const { data: unreadCount } = useUnreadNotificationCount();
 
   const getInitials = (name: string) => {
     return name
@@ -60,10 +62,11 @@ export function Header() {
             <Button variant="ghost" size="icon" className="relative" asChild>
               <Link to="/notifications">
                 <Bell className="h-5 w-5" />
-                {/* Notification badge - placeholder */}
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground">
-                  3
-                </span>
+                {unreadCount && unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
                 <span className="sr-only">Notifications</span>
               </Link>
             </Button>

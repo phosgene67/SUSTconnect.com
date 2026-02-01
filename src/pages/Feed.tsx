@@ -1,7 +1,14 @@
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { MainLayout, MobileNav } from '@/components/layout';
+import { usePosts, useVote, Post } from '@/hooks/usePosts';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { formatDistanceToNow } from 'date-fns';
 import { 
   Users, 
   MessageSquare, 
@@ -11,9 +18,29 @@ import {
   BookOpen,
   HelpCircle,
   FolderKanban,
+  ArrowBigUp,
+  ArrowBigDown,
+  MessageCircle,
+  Bookmark,
+  Bell,
 } from 'lucide-react';
 
-// Placeholder data for feed
+const categoryColors: Record<string, string> = {
+  academic_help: 'bg-blue-500/10 text-blue-600',
+  project: 'bg-green-500/10 text-green-600',
+  notice: 'bg-orange-500/10 text-orange-600',
+  question: 'bg-purple-500/10 text-purple-600',
+  resource: 'bg-pink-500/10 text-pink-600',
+};
+
+const categoryLabels: Record<string, string> = {
+  academic_help: 'Academic Help',
+  project: 'Project',
+  notice: 'Notice',
+  question: 'Question',
+  resource: 'Resource',
+};
+
 const trendingTopics = [
   { name: 'Final Exams', posts: 124 },
   { name: 'Thesis Defense', posts: 89 },
@@ -22,12 +49,115 @@ const trendingTopics = [
 ];
 
 const categories = [
-  { name: 'Academic Help', icon: HelpCircle, color: 'bg-primary/10 text-primary', count: 234 },
-  { name: 'Projects', icon: FolderKanban, color: 'bg-success/10 text-success', count: 156 },
-  { name: 'Resources', icon: BookOpen, color: 'bg-accent/10 text-accent', count: 89 },
+  { name: 'Academic Help', icon: HelpCircle, color: 'bg-primary/10 text-primary', count: 234, value: 'academic_help' },
+  { name: 'Projects', icon: FolderKanban, color: 'bg-green-500/10 text-green-500', count: 156, value: 'project' },
+  { name: 'Resources', icon: BookOpen, color: 'bg-pink-500/10 text-pink-500', count: 89, value: 'resource' },
 ];
 
+function PostCard({ post }: { post: Post }) {
+  const { user } = useAuth();
+  const vote = useVote();
+  const score = (post.upvotes || 0) - (post.downvotes || 0);
+
+  const handleVote = (value: 1 | -1) => {
+    if (!user) return;
+    const newValue = post.user_vote === value ? 0 : value;
+    vote.mutate({ targetId: post.id, targetType: 'post', value: newValue as 1 | -1 | 0 });
+  };
+
+  return (
+    <Card className="hover:shadow-md transition-shadow">
+      <CardContent className="p-4">
+        <div className="flex gap-4">
+          {/* Vote buttons */}
+          <div className="flex flex-col items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`h-8 w-8 ${post.user_vote === 1 ? 'text-primary bg-primary/10' : ''}`}
+              onClick={() => handleVote(1)}
+            >
+              <ArrowBigUp className="h-5 w-5" />
+            </Button>
+            <span className={`text-sm font-medium ${score > 0 ? 'text-primary' : score < 0 ? 'text-destructive' : ''}`}>
+              {score}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`h-8 w-8 ${post.user_vote === -1 ? 'text-destructive bg-destructive/10' : ''}`}
+              onClick={() => handleVote(-1)}
+            >
+              <ArrowBigDown className="h-5 w-5" />
+            </Button>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 min-w-0">
+            {/* Category & Author */}
+            <div className="flex items-center gap-2 mb-2">
+              <Badge variant="secondary" className={categoryColors[post.category] || ''}>
+                {categoryLabels[post.category] || post.category}
+              </Badge>
+              <span className="text-xs text-muted-foreground">•</span>
+              <Link to={`/profile/${post.author_id}`} className="flex items-center gap-1 hover:underline">
+                <Avatar className="h-5 w-5">
+                  <AvatarImage src={post.author?.avatar_url || undefined} />
+                  <AvatarFallback className="text-xs">
+                    {post.author?.full_name?.charAt(0) || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-xs text-muted-foreground">{post.author?.full_name || 'Unknown'}</span>
+              </Link>
+              <span className="text-xs text-muted-foreground">•</span>
+              <span className="text-xs text-muted-foreground">
+                {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
+              </span>
+            </div>
+
+            {/* Title */}
+            <h3 className="font-semibold text-lg mb-2 line-clamp-2 hover:text-primary cursor-pointer">
+              {post.title}
+            </h3>
+
+            {/* Content preview */}
+            <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+              {post.content}
+            </p>
+
+            {/* Tags */}
+            {post.tags && post.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1 mb-3">
+                {post.tags.slice(0, 3).map(tag => (
+                  <Badge key={tag} variant="outline" className="text-xs">
+                    #{tag}
+                  </Badge>
+                ))}
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="sm" className="h-8 text-muted-foreground">
+                <MessageCircle className="h-4 w-4 mr-1" />
+                {post.comment_count || 0} Comments
+              </Button>
+              <Button variant="ghost" size="sm" className="h-8 text-muted-foreground">
+                <Bookmark className="h-4 w-4 mr-1" />
+                Save
+              </Button>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function Feed() {
+  const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
+  const { data: posts, isLoading } = usePosts(selectedCategory);
+
   return (
     <MainLayout>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -59,21 +189,46 @@ export default function Feed() {
             </CardContent>
           </Card>
 
-          {/* Empty state for posts */}
-          <Card>
-            <CardContent className="py-12 text-center">
-              <div className="mx-auto h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                <MessageSquare className="h-6 w-6 text-muted-foreground" />
-              </div>
-              <h3 className="font-semibold mb-2">No posts yet</h3>
-              <p className="text-muted-foreground text-sm mb-4">
-                Be the first to start a conversation in your community!
-              </p>
-              <Button asChild>
-                <Link to="/create-post">Create First Post</Link>
+          {/* Filter Bar */}
+          {selectedCategory && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Filtering by:</span>
+              <Badge variant="secondary">{categoryLabels[selectedCategory]}</Badge>
+              <Button variant="ghost" size="sm" onClick={() => setSelectedCategory(undefined)}>
+                Clear
               </Button>
-            </CardContent>
-          </Card>
+            </div>
+          )}
+
+          {/* Posts */}
+          {isLoading ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map(i => (
+                <Skeleton key={i} className="h-48 w-full" />
+              ))}
+            </div>
+          ) : posts && posts.length > 0 ? (
+            <div className="space-y-4">
+              {posts.map(post => (
+                <PostCard key={post.id} post={post as Post} />
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <div className="mx-auto h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-4">
+                  <MessageSquare className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <h3 className="font-semibold mb-2">No posts yet</h3>
+                <p className="text-muted-foreground text-sm mb-4">
+                  Be the first to start a conversation in your community!
+                </p>
+                <Button asChild>
+                  <Link to="/create-post">Create First Post</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Sidebar Content */}
@@ -85,10 +240,12 @@ export default function Feed() {
             </CardHeader>
             <CardContent className="space-y-2">
               {categories.map((cat) => (
-                <Link
+                <button
                   key={cat.name}
-                  to={`/feed?category=${cat.name.toLowerCase().replace(' ', '_')}`}
-                  className="flex items-center justify-between p-2 rounded-md hover:bg-muted transition-colors"
+                  onClick={() => setSelectedCategory(selectedCategory === cat.value ? undefined : cat.value)}
+                  className={`flex items-center justify-between p-2 rounded-md w-full transition-colors ${
+                    selectedCategory === cat.value ? 'bg-primary/10' : 'hover:bg-muted'
+                  }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className={`p-2 rounded-md ${cat.color}`}>
@@ -97,7 +254,7 @@ export default function Feed() {
                     <span className="text-sm font-medium">{cat.name}</span>
                   </div>
                   <span className="text-xs text-muted-foreground">{cat.count}</span>
-                </Link>
+                </button>
               ))}
             </CardContent>
           </Card>
@@ -133,7 +290,7 @@ export default function Feed() {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
-                <Megaphone className="h-4 w-4 text-warning" />
+                <Megaphone className="h-4 w-4 text-orange-500" />
                 Latest Announcements
               </CardTitle>
             </CardHeader>

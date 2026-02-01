@@ -7,6 +7,13 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Feed from "./pages/Feed";
+import Profile from "./pages/Profile";
+import Notifications from "./pages/Notifications";
+import Announcements from "./pages/Announcements";
+import Korums from "./pages/Korums";
+import Messages from "./pages/Messages";
+import CreatePost from "./pages/CreatePost";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,19 +32,18 @@ const App = () => (
             
             {/* Main App Routes */}
             <Route path="/feed" element={<Feed />} />
+            <Route path="/korums" element={<Korums />} />
+            <Route path="/messages" element={<Messages />} />
+            <Route path="/announcements" element={<Announcements />} />
+            <Route path="/notifications" element={<Notifications />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/profile/:userId" element={<Profile />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/search" element={<Feed />} />
+            <Route path="/create-post" element={<CreatePost />} />
             
             {/* Redirect root to feed */}
             <Route path="/" element={<Navigate to="/feed" replace />} />
-            
-            {/* Placeholder routes - will be implemented */}
-            <Route path="/korums" element={<Feed />} />
-            <Route path="/messages" element={<Feed />} />
-            <Route path="/announcements" element={<Feed />} />
-            <Route path="/notifications" element={<Feed />} />
-            <Route path="/profile" element={<Feed />} />
-            <Route path="/settings" element={<Feed />} />
-            <Route path="/search" element={<Feed />} />
-            <Route path="/create-post" element={<Feed />} />
             
             {/* 404 */}
             <Route path="*" element={<NotFound />} />
