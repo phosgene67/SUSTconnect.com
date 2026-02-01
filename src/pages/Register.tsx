@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff, Loader2, Check } from 'lucide-react';
@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { APP_NAME, UNIVERSITY_EMAIL_DOMAIN, DEPARTMENTS, generateBatchYears } from '@/lib/constants';
 import { registerSchema, type RegisterFormData } from '@/lib/validations';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 const batchYears = generateBatchYears();
 
@@ -19,6 +20,8 @@ export default function Register() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { signUp } = useAuth();
+  const navigate = useNavigate();
 
   const {
     register,
@@ -47,12 +50,26 @@ export default function Register() {
   const onSubmit = async (data: RegisterFormData) => {
     setIsLoading(true);
     try {
-      // TODO: Implement actual registration with Supabase
-      console.log('Registration data:', data);
-      toast({
-        title: 'Registration feature coming soon',
-        description: 'Connect your Supabase account to enable user registration.',
+      const { error } = await signUp(data.email, data.password, {
+        full_name: data.fullName,
+        department: data.department,
+        batch: data.batch,
       });
+
+      if (error) {
+        toast({
+          title: 'Registration failed',
+          description: error.message,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      toast({
+        title: 'Account created!',
+        description: 'Please check your email to verify your account before logging in.',
+      });
+      navigate('/login');
     } catch (error) {
       toast({
         title: 'Error',

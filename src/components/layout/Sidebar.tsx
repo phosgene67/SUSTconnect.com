@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Home, 
   Users, 
@@ -9,9 +9,13 @@ import {
   PlusCircle,
   Megaphone,
   Search,
+  LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { APP_NAME } from '@/lib/constants';
+import { useAuth } from '@/contexts/AuthContext';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 
 const navigation = [
   { name: 'Feed', href: '/feed', icon: Home },
@@ -28,6 +32,22 @@ const secondaryNav = [
 
 export function Sidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, profile, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/login');
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
   return (
     <aside className="hidden lg:flex lg:flex-col lg:w-64 border-r border-border bg-sidebar">
@@ -51,15 +71,17 @@ export function Sidebar() {
       </div>
 
       {/* Create Post Button */}
-      <div className="px-4 pb-2">
-        <Link
-          to="/create-post"
-          className="flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-        >
-          <PlusCircle className="h-4 w-4" />
-          <span>Create Post</span>
-        </Link>
-      </div>
+      {user && (
+        <div className="px-4 pb-2">
+          <Link
+            to="/create-post"
+            className="flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            <PlusCircle className="h-4 w-4" />
+            <span>Create Post</span>
+          </Link>
+        </div>
+      )}
 
       {/* Primary Navigation */}
       <nav className="flex-1 px-3 py-2">
@@ -113,21 +135,41 @@ export function Sidebar() {
         </ul>
       </nav>
 
-      {/* User info at bottom - placeholder */}
+      {/* User info at bottom */}
       <div className="border-t border-sidebar-border p-4">
-        <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center">
-            <User className="h-5 w-5 text-muted-foreground" />
+        {user && profile ? (
+          <div className="flex items-center gap-3">
+            <Avatar className="h-9 w-9">
+              <AvatarImage src={profile.avatar_url || undefined} />
+              <AvatarFallback>{getInitials(profile.full_name)}</AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-sidebar-foreground truncate">
+                {profile.full_name}
+              </p>
+              <p className="text-xs text-muted-foreground truncate">
+                {profile.department}
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleSignOut}
+              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-sidebar-foreground truncate">
-              Guest User
-            </p>
-            <p className="text-xs text-muted-foreground truncate">
-              Not logged in
-            </p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <Button asChild size="sm">
+              <Link to="/login">Sign In</Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/register">Create Account</Link>
+            </Button>
           </div>
-        </div>
+        )}
       </div>
     </aside>
   );
