@@ -172,7 +172,7 @@ export default function Messages() {
   const selectedConversation = conversations?.find(c => c.other_user?.id === selectedUserId);
   const pinnedMessages = korumMessages?.filter(m => m.is_pinned) || [];
 
-  const renderReactions = (reactions: { emoji: string; user_id: string; user_name?: string }[] | undefined) => {
+  const renderReactions = (messageId: string, reactions: { emoji: string; user_id: string; user_name?: string }[] | undefined) => {
     if (!reactions || reactions.length === 0) return null;
     
     // Group by emoji
@@ -184,16 +184,19 @@ export default function Messages() {
 
     return (
       <div className="flex flex-wrap gap-1 mt-1">
-        {Object.entries(grouped).map(([emoji, users]) => (
-          <Badge 
-            key={emoji} 
-            variant="secondary" 
-            className="text-xs px-1.5 py-0 cursor-pointer hover:bg-muted"
-            onClick={() => handleReact(reactions[0].user_id, emoji)}
-          >
-            {emoji} {users.length}
-          </Badge>
-        ))}
+        {Object.entries(grouped).map(([emoji, users]) => {
+          const hasUserReacted = users.some(u => u.user_id === user?.id);
+          return (
+            <Badge 
+              key={emoji} 
+              variant={hasUserReacted ? "default" : "secondary"}
+              className="text-xs px-1.5 py-0 cursor-pointer hover:bg-muted"
+              onClick={() => handleReact(messageId, emoji)}
+            >
+              {emoji} {users.length}
+            </Badge>
+          );
+        })}
       </div>
     );
   };
@@ -322,7 +325,7 @@ export default function Messages() {
             </div>
             
             {/* Reactions */}
-            {renderReactions(msg.reactions)}
+            {renderReactions(msg.id, msg.reactions)}
           </div>
         </div>
       </div>
