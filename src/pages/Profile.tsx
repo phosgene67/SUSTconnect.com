@@ -6,11 +6,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useUserResearch, useCreateResearch, useDeleteResearch } from '@/hooks/useUserResearch';
 import { useUserProjects, useCreateProject, useDeleteProject } from '@/hooks/useUserProjects';
+import { useImageUpload } from '@/hooks/useImageUpload';
+import { ImageUpload } from '@/components/ImageUpload';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -116,6 +118,32 @@ export default function Profile() {
     },
   });
 
+  const updateAvatar = useMutation({
+    mutationFn: async (avatarUrl: string) => {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ avatar_url: avatarUrl })
+        .eq('user_id', user!.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['profile', targetUserId] });
+      toast({ title: 'Success', description: 'Profile picture updated!' });
+    },
+    onError: (error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const { upload: uploadAvatar, isUploading: isUploadingAvatar } = useImageUpload({
+    bucket: 'avatars',
+    folder: user?.id,
+    onSuccess: (url) => {
+      updateAvatar.mutate(url);
+    },
+  });
+
   const startEditing = () => {
     if (profile) {
       setEditForm({
@@ -213,12 +241,22 @@ export default function Profile() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex flex-col md:flex-row gap-6">
-              <Avatar className="h-24 w-24">
-                <AvatarImage src={profile.avatar_url || undefined} />
-                <AvatarFallback className="text-2xl">
-                  {profile.full_name.charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+              {isOwnProfile ? (
+                <ImageUpload
+                  currentImage={profile.avatar_url}
+                  onUpload={uploadAvatar}
+                  isUploading={isUploadingAvatar}
+                  fallback={profile.full_name}
+                  type="profile"
+                />
+              ) : (
+                <Avatar className="h-24 w-24">
+                  <AvatarImage src={profile.avatar_url || undefined} />
+                  <AvatarFallback className="text-2xl">
+                    {profile.full_name.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              )}
 
               <div className="flex-1">
                 <div className="flex items-start justify-between">
