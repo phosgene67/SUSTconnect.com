@@ -8,13 +8,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { APP_NAME, UNIVERSITY_EMAIL_DOMAIN, DEPARTMENTS, generateBatchYears } from '@/lib/constants';
+import { APP_NAME, UNIVERSITY_EMAIL_DOMAIN, DEPARTMENTS, generateSessions } from '@/lib/constants';
 import { registerSchema, type RegisterFormData } from '@/lib/validations';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import logo from '@/assets/logo.png';
 
-const batchYears = generateBatchYears();
+const sessions = generateSessions();
 
 export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
@@ -85,10 +85,14 @@ export default function Register() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4 py-12">
       <div className="w-full max-w-md">
-        {/* Logo and branding */}
+        {/* Logo and branding - Facebook/Reddit style */}
         <div className="text-center mb-8">
-          <img src={logo} alt={APP_NAME} className="h-48 w-auto mx-auto mb-4" />
-          <p className="text-muted-foreground mt-1">
+          <img 
+            src={logo} 
+            alt={APP_NAME} 
+            className="h-16 sm:h-20 md:h-24 w-auto mx-auto mb-2 object-contain"
+          />
+          <p className="text-muted-foreground text-sm sm:text-base">
             Join your university community
           </p>
         </div>
@@ -153,15 +157,15 @@ export default function Register() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Batch Year</Label>
+                  <Label>Session</Label>
                   <Select onValueChange={(value) => setValue('batch', value)}>
                     <SelectTrigger className={errors.batch ? 'border-destructive' : ''}>
-                      <SelectValue placeholder="Year" />
+                      <SelectValue placeholder="Session" />
                     </SelectTrigger>
                     <SelectContent>
-                      {batchYears.map((year) => (
-                        <SelectItem key={year} value={year}>
-                          {year}
+                      {sessions.map((session) => (
+                        <SelectItem key={session} value={session}>
+                          {session}
                         </SelectItem>
                       ))}
                     </SelectContent>

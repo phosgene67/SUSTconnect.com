@@ -61,10 +61,14 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4 py-12">
       <div className="w-full max-w-md">
-        {/* Logo and branding */}
+        {/* Logo and branding - Facebook/Reddit style */}
         <div className="text-center mb-8">
-          <img src={logo} alt={APP_NAME} className="h-48 w-auto mx-auto mb-4" />
-          <p className="text-muted-foreground mt-1">
+          <img 
+            src={logo} 
+            alt={APP_NAME} 
+            className="h-16 sm:h-20 md:h-24 w-auto mx-auto mb-2 object-contain"
+          />
+          <p className="text-muted-foreground text-sm sm:text-base">
             Your private academic community
           </p>
         </div>

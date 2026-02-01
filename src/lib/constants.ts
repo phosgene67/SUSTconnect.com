@@ -94,10 +94,13 @@ export const DEPARTMENTS = [
   'Oceanography',
 ] as const;
 
-// Batch years (dynamic, last 10 years)
-export const generateBatchYears = () => {
+// Session years (dynamic, last 10 sessions in format YYYY-YYYY)
+export const generateSessions = () => {
   const currentYear = new Date().getFullYear();
-  return Array.from({ length: 10 }, (_, i) => (currentYear - i).toString());
+  return Array.from({ length: 10 }, (_, i) => {
+    const startYear = currentYear - i;
+    return `${startYear}-${startYear + 1}`;
+  });
 };
 
 // Announcement priorities
