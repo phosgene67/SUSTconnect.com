@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
@@ -10,11 +10,14 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { APP_NAME, UNIVERSITY_EMAIL_DOMAIN } from '@/lib/constants';
 import { loginSchema, type LoginFormData } from '@/lib/validations';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { signIn } = useAuth();
+  const navigate = useNavigate();
 
   const {
     register,
@@ -27,12 +30,22 @@ export default function Login() {
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     try {
-      // TODO: Implement actual login with Supabase
-      console.log('Login attempt:', data);
+      const { error } = await signIn(data.email, data.password);
+      
+      if (error) {
+        toast({
+          title: 'Login failed',
+          description: error.message,
+          variant: 'destructive',
+        });
+        return;
+      }
+      
       toast({
-        title: 'Login feature coming soon',
-        description: 'Connect your Supabase account to enable authentication.',
+        title: 'Welcome back!',
+        description: 'You have been logged in successfully.',
       });
+      navigate('/feed');
     } catch (error) {
       toast({
         title: 'Error',
