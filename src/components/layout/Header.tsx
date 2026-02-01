@@ -6,6 +6,7 @@ import { APP_NAME } from '@/lib/constants';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUnreadNotificationCount } from '@/hooks/useNotifications';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import logo from '@/assets/logo.png';
 
 export function Header() {
   const { user, profile } = useAuth();
@@ -29,12 +30,9 @@ export function Header() {
       </Button>
 
       {/* Mobile Logo */}
-      <div className="flex lg:hidden items-center gap-2">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-sm">
-          SC
-        </div>
-        <span className="font-semibold">{APP_NAME}</span>
-      </div>
+      <Link to="/feed" className="flex lg:hidden items-center gap-2">
+        <img src={logo} alt={APP_NAME} className="h-8 w-auto" />
+      </Link>
 
       {/* Search Bar - Desktop */}
       <div className="hidden md:flex flex-1 max-w-md">

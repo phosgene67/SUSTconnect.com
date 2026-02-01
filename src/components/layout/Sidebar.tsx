@@ -16,6 +16,7 @@ import { APP_NAME } from '@/lib/constants';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import logo from '@/assets/logo.png';
 
 const navigation = [
   { name: 'Feed', href: '/feed', icon: Home },
@@ -52,12 +53,9 @@ export function Sidebar() {
   return (
     <aside className="hidden lg:flex lg:flex-col lg:w-64 border-r border-border bg-sidebar">
       {/* Logo */}
-      <div className="flex h-16 items-center gap-2 px-6 border-b border-sidebar-border">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-sm">
-          SC
-        </div>
-        <span className="font-semibold text-sidebar-foreground">{APP_NAME}</span>
-      </div>
+      <Link to="/feed" className="flex h-16 items-center px-6 border-b border-sidebar-border">
+        <img src={logo} alt={APP_NAME} className="h-9 w-auto" />
+      </Link>
 
       {/* Search */}
       <div className="p-4">
