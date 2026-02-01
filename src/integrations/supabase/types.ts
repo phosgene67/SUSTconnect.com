@@ -167,8 +167,49 @@ export type Database = {
           },
         ]
       }
+      korum_pinned_messages: {
+        Row: {
+          id: string
+          korum_id: string
+          message_id: string
+          pinned_at: string | null
+          pinned_by: string
+        }
+        Insert: {
+          id?: string
+          korum_id: string
+          message_id: string
+          pinned_at?: string | null
+          pinned_by: string
+        }
+        Update: {
+          id?: string
+          korum_id?: string
+          message_id?: string
+          pinned_at?: string | null
+          pinned_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "korum_pinned_messages_korum_id_fkey"
+            columns: ["korum_id"]
+            isOneToOne: false
+            referencedRelation: "korums"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "korum_pinned_messages_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       korums: {
         Row: {
+          admin_only_posting: boolean | null
+          allow_member_messages: boolean | null
           avatar_url: string | null
           cover_url: string | null
           created_at: string | null
@@ -182,6 +223,8 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          admin_only_posting?: boolean | null
+          allow_member_messages?: boolean | null
           avatar_url?: string | null
           cover_url?: string | null
           created_at?: string | null
@@ -195,6 +238,8 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          admin_only_posting?: boolean | null
+          allow_member_messages?: boolean | null
           avatar_url?: string | null
           cover_url?: string | null
           created_at?: string | null
@@ -415,6 +460,84 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_projects: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          github_url: string | null
+          id: string
+          image_url: string | null
+          is_featured: boolean | null
+          project_url: string | null
+          technologies: string[] | null
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          github_url?: string | null
+          id?: string
+          image_url?: string | null
+          is_featured?: boolean | null
+          project_url?: string | null
+          technologies?: string[] | null
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          github_url?: string | null
+          id?: string
+          image_url?: string | null
+          is_featured?: boolean | null
+          project_url?: string | null
+          technologies?: string[] | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_research: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          publication_url: string | null
+          published_at: string | null
+          tags: string[] | null
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          publication_url?: string | null
+          published_at?: string | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          publication_url?: string | null
+          published_at?: string | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
