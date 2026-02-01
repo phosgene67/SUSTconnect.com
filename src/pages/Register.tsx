@@ -90,7 +90,7 @@ export default function Register() {
           <img 
             src={logo} 
             alt={APP_NAME} 
-            className="h-16 sm:h-20 md:h-24 w-auto mx-auto mb-2 object-contain"
+            className="h-32 sm:h-40 md:h-48 w-auto mx-auto mb-4 object-contain"
           />
           <p className="text-muted-foreground text-sm sm:text-base">
             Join your university community
