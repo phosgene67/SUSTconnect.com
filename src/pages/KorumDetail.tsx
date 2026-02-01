@@ -44,6 +44,118 @@ interface ExtendedKorum extends Korum {
   allow_member_messages?: boolean;
 }
 
+// Add Member Dialog Component
+function AddMemberDialog({ korumId, existingMemberIds }: { korumId: string; existingMemberIds: string[] }) {
+  const [open, setOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const queryClient = useQueryClient();
+
+  // Search for users to add
+  const { data: searchResults, isLoading: isSearching } = useQuery({
+    queryKey: ['user-search', searchQuery],
+    queryFn: async () => {
+      if (!searchQuery.trim()) return [];
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, avatar_url, department')
+        .ilike('full_name', `%${searchQuery}%`)
+        .not('user_id', 'in', `(${existingMemberIds.join(',')})`)
+        .limit(10);
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: searchQuery.length >= 2,
+  });
+
+  const addMember = useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase
+        .from('korum_members')
+        .insert({ korum_id: korumId, user_id: userId, role: 'member' });
+      
+      if (error) throw error;
+      
+      // Update member count
+      const { data: korum } = await supabase
+        .from('korums')
+        .select('member_count')
+        .eq('id', korumId)
+        .single();
+      
+      if (korum) {
+        await supabase
+          .from('korums')
+          .update({ member_count: (korum.member_count || 0) + 1 })
+          .eq('id', korumId);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['korum-members', korumId] });
+      queryClient.invalidateQueries({ queryKey: ['korum', korumId] });
+      queryClient.invalidateQueries({ queryKey: ['korums'] });
+      toast({ title: 'Success', description: 'Member added!' });
+      setSearchQuery('');
+    },
+    onError: (error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm">
+          <UserPlus className="h-4 w-4 mr-2" />
+          Add Member
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Add Member to Korum</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <Input
+            placeholder="Search by name..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {isSearching && <p className="text-sm text-muted-foreground">Searching...</p>}
+          {searchResults && searchResults.length > 0 ? (
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {searchResults.map((user: any) => (
+                <div key={user.user_id} className="flex items-center justify-between p-2 rounded-lg border">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user.avatar_url || undefined} />
+                      <AvatarFallback>{user.full_name?.charAt(0) || '?'}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-sm font-medium">{user.full_name}</p>
+                      <p className="text-xs text-muted-foreground">{user.department}</p>
+                    </div>
+                  </div>
+                  <Button 
+                    size="sm" 
+                    onClick={() => addMember.mutate(user.user_id)}
+                    disabled={addMember.isPending}
+                  >
+                    Add
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : searchQuery.length >= 2 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">No users found</p>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-4">Type at least 2 characters to search</p>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function KorumDetail() {
   const { korumId } = useParams<{ korumId: string }>();
   const navigate = useNavigate();
@@ -403,8 +515,11 @@ export default function KorumDetail() {
             {/* Members Tab */}
             <TabsContent value="members">
               <Card>
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle>Members ({korum.member_count})</CardTitle>
+                  {isAdmin && (
+                    <AddMemberDialog korumId={korumId!} existingMemberIds={members?.map((m: any) => m.user_id) || []} />
+                  )}
                 </CardHeader>
                 <CardContent>
                   <ScrollArea className="h-96">

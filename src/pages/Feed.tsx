@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { MainLayout, MobileNav } from '@/components/layout';
 import { usePosts, useVote, Post } from '@/hooks/usePosts';
 import { useAuth } from '@/contexts/AuthContext';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -128,12 +128,53 @@ function useLatestAnnouncements() {
 function PostCard({ post }: { post: Post }) {
   const { user } = useAuth();
   const vote = useVote();
+  const queryClient = useQueryClient();
   const score = (post.upvotes || 0) - (post.downvotes || 0);
+
+  // Check if post is saved
+  const { data: isSaved } = useQuery({
+    queryKey: ['saved-post', post.id, user?.id],
+    queryFn: async () => {
+      if (!user) return false;
+      const { data } = await supabase
+        .from('saved_posts')
+        .select('id')
+        .eq('post_id', post.id)
+        .eq('user_id', user.id)
+        .maybeSingle();
+      return !!data;
+    },
+    enabled: !!user,
+  });
 
   const handleVote = (value: 1 | -1) => {
     if (!user) return;
     const newValue = post.user_vote === value ? 0 : value;
     vote.mutate({ targetId: post.id, targetType: 'post', value: newValue as 1 | -1 | 0 });
+  };
+
+  const handleSave = async () => {
+    if (!user) return;
+    
+    if (isSaved) {
+      const { error } = await supabase
+        .from('saved_posts')
+        .delete()
+        .eq('post_id', post.id)
+        .eq('user_id', user.id);
+      
+      if (!error) {
+        queryClient.invalidateQueries({ queryKey: ['saved-post', post.id, user.id] });
+      }
+    } else {
+      const { error } = await supabase
+        .from('saved_posts')
+        .insert({ post_id: post.id, user_id: user.id });
+      
+      if (!error) {
+        queryClient.invalidateQueries({ queryKey: ['saved-post', post.id, user.id] });
+      }
+    }
   };
 
   return (
@@ -217,10 +258,17 @@ function PostCard({ post }: { post: Post }) {
                   {post.comment_count || 0} Comments
                 </Link>
               </Button>
-              <Button variant="ghost" size="sm" className="h-8 text-muted-foreground">
-                <Bookmark className="h-4 w-4 mr-1" />
-                Save
-              </Button>
+              {user && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className={`h-8 ${isSaved ? 'text-primary' : 'text-muted-foreground'}`}
+                  onClick={handleSave}
+                >
+                  <Bookmark className={`h-4 w-4 mr-1 ${isSaved ? 'fill-current' : ''}`} />
+                  {isSaved ? 'Saved' : 'Save'}
+                </Button>
+              )}
             </div>
           </div>
         </div>
