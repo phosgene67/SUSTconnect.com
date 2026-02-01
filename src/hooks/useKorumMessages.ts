@@ -118,13 +118,28 @@ export function useKorumMembers(korumId: string) {
   return useQuery({
     queryKey: ['korum-members-chat', korumId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: members, error } = await supabase
         .from('korum_members')
-        .select('*, profiles:user_id(user_id, full_name, avatar_url, department)')
+        .select('*')
         .eq('korum_id', korumId);
 
       if (error) throw error;
-      return data;
+      if (!members || members.length === 0) return [];
+
+      // Fetch profiles separately
+      const userIds = members.map(m => m.user_id);
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, avatar_url, department')
+        .in('user_id', userIds);
+
+      const profileMap = new Map<string, { user_id: string; full_name: string; avatar_url: string | null; department: string }>();
+      profiles?.forEach(p => profileMap.set(p.user_id, p));
+
+      return members.map(m => ({
+        ...m,
+        profiles: profileMap.get(m.user_id) || null,
+      }));
     },
     enabled: !!korumId,
   });
