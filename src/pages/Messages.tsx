@@ -1,8 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
 import { MainLayout, MobileNav } from '@/components/layout';
-import { useConversations, useMessages, useSendMessage } from '@/hooks/useMessages';
+import { useConversations, useMessages, useSendMessage, Message } from '@/hooks/useMessages';
 import { useKorums } from '@/hooks/useKorums';
-import { useKorumMessages, useSendKorumMessage, usePinMessage, useUnpinMessage } from '@/hooks/useKorumMessages';
+import { 
+  useKorumMessages, 
+  useSendKorumMessage, 
+  usePinMessage, 
+  useUnpinMessage, 
+  useDeleteMessage,
+  useReactToMessage,
+  useKorumMembers,
+  KorumMessage 
+} from '@/hooks/useKorumMessages';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
@@ -13,8 +22,26 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger,
+  DropdownMenuSeparator 
+} from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { formatDistanceToNow } from 'date-fns';
 import { 
   MessageSquare, 
@@ -25,9 +52,16 @@ import {
   Pin,
   MoreVertical,
   Shield,
+  Reply,
+  Smile,
+  Trash2,
+  X,
+  Crown,
 } from 'lucide-react';
 
 type ChatType = 'direct' | 'korum';
+
+const EMOJI_OPTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥', '👏', '🎉'];
 
 export default function Messages() {
   const { user } = useAuth();
@@ -38,24 +72,25 @@ export default function Messages() {
   const [chatType, setChatType] = useState<ChatType>('direct');
   const [searchQuery, setSearchQuery] = useState('');
   const [message, setMessage] = useState('');
+  const [replyingTo, setReplyingTo] = useState<{ id: string; content: string; senderName: string } | null>(null);
+  const [showMembersDialog, setShowMembersDialog] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { data: directMessages, isLoading: loadingDirectMessages } = useMessages(selectedUserId || '');
   const { data: korumMessages, isLoading: loadingKorumMessages } = useKorumMessages(selectedKorumId || '');
+  const { data: korumMembers } = useKorumMembers(selectedKorumId || '');
   const sendMessage = useSendMessage();
   const sendKorumMessage = useSendKorumMessage();
   const pinMessage = usePinMessage();
   const unpinMessage = useUnpinMessage();
+  const deleteMessage = useDeleteMessage();
+  const reactToMessage = useReactToMessage();
 
-  // Get joined korums only
   const joinedKorums = (korums as any[])?.filter(k => k.is_member) || [];
-
-  // Get user's role in selected korum
   const selectedKorum = joinedKorums.find(k => k.id === selectedKorumId);
   const isKorumAdmin = selectedKorum?.user_role === 'admin' || selectedKorum?.user_role === 'moderator';
   const canPostInKorum = !selectedKorum?.admin_only_posting || isKorumAdmin;
 
-  // Search users
   const { data: searchResults } = useQuery({
     queryKey: ['users-search', searchQuery],
     queryFn: async () => {
@@ -73,7 +108,6 @@ export default function Messages() {
     enabled: !!searchQuery.trim() && !!user && chatType === 'direct',
   });
 
-  // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [directMessages, korumMessages]);
@@ -82,11 +116,45 @@ export default function Messages() {
     if (!message.trim()) return;
     
     if (chatType === 'direct' && selectedUserId) {
-      sendMessage.mutate({ receiverId: selectedUserId, content: message });
+      sendMessage.mutate({ 
+        receiverId: selectedUserId, 
+        content: message,
+        replyToId: replyingTo?.id 
+      });
     } else if (chatType === 'korum' && selectedKorumId) {
-      sendKorumMessage.mutate({ korumId: selectedKorumId, content: message });
+      sendKorumMessage.mutate({ 
+        korumId: selectedKorumId, 
+        content: message,
+        replyToId: replyingTo?.id 
+      });
     }
     setMessage('');
+    setReplyingTo(null);
+  };
+
+  const handleReply = (msg: KorumMessage | Message) => {
+    setReplyingTo({
+      id: msg.id,
+      content: msg.content,
+      senderName: msg.sender?.full_name || 'Unknown',
+    });
+  };
+
+  const handleDelete = (messageId: string) => {
+    deleteMessage.mutate({ 
+      messageId, 
+      korumId: selectedKorumId || undefined,
+      receiverId: selectedUserId || undefined 
+    });
+  };
+
+  const handleReact = (messageId: string, emoji: string) => {
+    reactToMessage.mutate({ 
+      messageId, 
+      emoji,
+      korumId: selectedKorumId || undefined,
+      receiverId: selectedUserId || undefined 
+    });
   };
 
   const handlePinMessage = (messageId: string) => {
@@ -102,9 +170,164 @@ export default function Messages() {
   };
 
   const selectedConversation = conversations?.find(c => c.other_user?.id === selectedUserId);
-
-  // Get pinned messages for display
   const pinnedMessages = korumMessages?.filter(m => m.is_pinned) || [];
+
+  const renderReactions = (reactions: { emoji: string; user_id: string; user_name?: string }[] | undefined) => {
+    if (!reactions || reactions.length === 0) return null;
+    
+    // Group by emoji
+    const grouped = reactions.reduce((acc, r) => {
+      acc[r.emoji] = acc[r.emoji] || [];
+      acc[r.emoji].push(r);
+      return acc;
+    }, {} as Record<string, typeof reactions>);
+
+    return (
+      <div className="flex flex-wrap gap-1 mt-1">
+        {Object.entries(grouped).map(([emoji, users]) => (
+          <Badge 
+            key={emoji} 
+            variant="secondary" 
+            className="text-xs px-1.5 py-0 cursor-pointer hover:bg-muted"
+            onClick={() => handleReact(reactions[0].user_id, emoji)}
+          >
+            {emoji} {users.length}
+          </Badge>
+        ))}
+      </div>
+    );
+  };
+
+  const renderMessage = (msg: KorumMessage | Message, isKorum: boolean) => {
+    const isSender = msg.sender_id === user?.id;
+    const korumMsg = msg as KorumMessage;
+    
+    return (
+      <div
+        key={msg.id}
+        className={`flex ${isSender ? 'justify-end' : 'justify-start'} group`}
+      >
+        <div className="flex items-start gap-2 max-w-[80%]">
+          {!isSender && isKorum && (
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={msg.sender?.avatar_url || undefined} />
+              <AvatarFallback className="text-xs">
+                {msg.sender?.full_name?.charAt(0) || '?'}
+              </AvatarFallback>
+            </Avatar>
+          )}
+          <div className="flex-1">
+            {!isSender && isKorum && (
+              <p className="text-xs text-muted-foreground mb-1">
+                {msg.sender?.full_name}
+              </p>
+            )}
+            
+            {/* Reply preview */}
+            {msg.reply_to && (
+              <div className="text-xs bg-muted/50 rounded px-2 py-1 mb-1 border-l-2 border-primary">
+                <span className="font-medium">{msg.reply_to.sender_name}: </span>
+                <span className="text-muted-foreground truncate">{msg.reply_to.content.substring(0, 50)}...</span>
+              </div>
+            )}
+            
+            <div className="flex items-center gap-1">
+              <div
+                className={`rounded-lg px-4 py-2 ${
+                  isSender
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted'
+                }`}
+              >
+                {korumMsg.is_pinned && (
+                  <Pin className="h-3 w-3 inline mr-1" />
+                )}
+                <p className="text-sm">{msg.content}</p>
+                <p className={`text-xs mt-1 ${
+                  isSender ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                }`}>
+                  {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
+                </p>
+              </div>
+              
+              {/* Message actions */}
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center">
+                {/* Emoji reaction */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
+                      <Smile className="h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-2" side="top">
+                    <div className="flex gap-1">
+                      {EMOJI_OPTIONS.map(emoji => (
+                        <button
+                          key={emoji}
+                          onClick={() => handleReact(msg.id, emoji)}
+                          className="text-lg hover:bg-muted rounded p-1"
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                {/* More options dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align={isSender ? 'end' : 'start'}>
+                    <DropdownMenuItem onClick={() => handleReply(msg)}>
+                      <Reply className="h-4 w-4 mr-2" />
+                      Reply
+                    </DropdownMenuItem>
+                    
+                    {isKorum && isKorumAdmin && (
+                      <>
+                        <DropdownMenuSeparator />
+                        {korumMsg.is_pinned ? (
+                          <DropdownMenuItem onClick={() => handleUnpinMessage(msg.id)}>
+                            <Pin className="h-4 w-4 mr-2" />
+                            Unpin
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem onClick={() => handlePinMessage(msg.id)}>
+                            <Pin className="h-4 w-4 mr-2" />
+                            Pin
+                          </DropdownMenuItem>
+                        )}
+                      </>
+                    )}
+                    
+                    {isSender && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          onClick={() => handleDelete(msg.id)}
+                          className="text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete for everyone
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+            
+            {/* Reactions */}
+            {renderReactions(msg.reactions)}
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   if (!user) {
     return (
@@ -130,7 +353,6 @@ export default function Messages() {
                 Messages
               </CardTitle>
               
-              {/* Tabs for Direct vs Korum */}
               <Tabs value={chatType} onValueChange={(v) => setChatType(v as ChatType)} className="mt-2">
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="direct">Direct</TabsTrigger>
@@ -157,7 +379,6 @@ export default function Messages() {
             <ScrollArea className="flex-1">
               {chatType === 'direct' ? (
                 <>
-                  {/* Search Results */}
                   {searchQuery && searchResults && searchResults.length > 0 && (
                     <div className="p-2 border-b">
                       <p className="text-xs text-muted-foreground px-2 mb-2">Search Results</p>
@@ -184,7 +405,6 @@ export default function Messages() {
                     </div>
                   )}
 
-                  {/* Direct Conversations */}
                   {loadingConversations ? (
                     <div className="p-2 space-y-2">
                       {[1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full" />)}
@@ -232,7 +452,6 @@ export default function Messages() {
                   )}
                 </>
               ) : (
-                /* Korum Groups */
                 loadingKorums ? (
                   <div className="p-2 space-y-2">
                     {[1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full" />)}
@@ -339,6 +558,46 @@ export default function Messages() {
                           {selectedKorum.member_count} members • {selectedKorum.type}
                         </p>
                       </div>
+                      
+                      {/* See Members Button */}
+                      <Dialog open={showMembersDialog} onOpenChange={setShowMembersDialog}>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            <Users className="h-4 w-4 mr-2" />
+                            Members
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Members ({selectedKorum.member_count})</DialogTitle>
+                          </DialogHeader>
+                          <ScrollArea className="h-80">
+                            <div className="space-y-2">
+                              {korumMembers?.map((member: any) => (
+                                <div key={member.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted">
+                                  <div className="flex items-center gap-3">
+                                    <Avatar className="h-10 w-10">
+                                      <AvatarImage src={member.profiles?.avatar_url || undefined} />
+                                      <AvatarFallback>
+                                        {member.profiles?.full_name?.charAt(0) || '?'}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                      <p className="font-medium text-sm">{member.profiles?.full_name}</p>
+                                      <p className="text-xs text-muted-foreground">{member.profiles?.department}</p>
+                                    </div>
+                                  </div>
+                                  <Badge variant={member.role === 'admin' ? 'default' : 'secondary'} className="text-xs">
+                                    {member.role === 'admin' && <Crown className="h-3 w-3 mr-1" />}
+                                    {member.role === 'moderator' && <Shield className="h-3 w-3 mr-1" />}
+                                    {member.role}
+                                  </Badge>
+                                </div>
+                              ))}
+                            </div>
+                          </ScrollArea>
+                        </DialogContent>
+                      </Dialog>
                     </>
                   ) : null}
                 </div>
@@ -372,73 +631,9 @@ export default function Messages() {
                   ) : (chatType === 'direct' ? directMessages : korumMessages) && 
                        (chatType === 'direct' ? directMessages : korumMessages)!.length > 0 ? (
                     <div className="space-y-4">
-                      {(chatType === 'direct' ? directMessages : korumMessages)!.map((msg: any) => (
-                        <div
-                          key={msg.id}
-                          className={`flex ${msg.sender_id === user.id ? 'justify-end' : 'justify-start'}`}
-                        >
-                          <div className="flex items-start gap-2 max-w-[80%]">
-                            {msg.sender_id !== user.id && chatType === 'korum' && (
-                              <Avatar className="h-8 w-8">
-                                <AvatarImage src={msg.sender?.avatar_url || undefined} />
-                                <AvatarFallback className="text-xs">
-                                  {msg.sender?.full_name?.charAt(0) || '?'}
-                                </AvatarFallback>
-                              </Avatar>
-                            )}
-                            <div>
-                              {msg.sender_id !== user.id && chatType === 'korum' && (
-                                <p className="text-xs text-muted-foreground mb-1">
-                                  {msg.sender?.full_name}
-                                </p>
-                              )}
-                              <div className="flex items-center gap-1">
-                                <div
-                                  className={`rounded-lg px-4 py-2 ${
-                                    msg.sender_id === user.id
-                                      ? 'bg-primary text-primary-foreground'
-                                      : 'bg-muted'
-                                  }`}
-                                >
-                                  {msg.is_pinned && (
-                                    <Pin className="h-3 w-3 inline mr-1" />
-                                  )}
-                                  <p className="text-sm">{msg.content}</p>
-                                  <p className={`text-xs mt-1 ${
-                                    msg.sender_id === user.id ? 'text-primary-foreground/70' : 'text-muted-foreground'
-                                  }`}>
-                                    {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
-                                  </p>
-                                </div>
-                                
-                                {/* Pin/Unpin option for admins in korum */}
-                                {chatType === 'korum' && isKorumAdmin && (
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button size="sm" variant="ghost" className="h-6 w-6 p-0">
-                                        <MoreVertical className="h-4 w-4" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent>
-                                      {msg.is_pinned ? (
-                                        <DropdownMenuItem onClick={() => handleUnpinMessage(msg.id)}>
-                                          <Pin className="h-4 w-4 mr-2" />
-                                          Unpin
-                                        </DropdownMenuItem>
-                                      ) : (
-                                        <DropdownMenuItem onClick={() => handlePinMessage(msg.id)}>
-                                          <Pin className="h-4 w-4 mr-2" />
-                                          Pin
-                                        </DropdownMenuItem>
-                                      )}
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                      {(chatType === 'direct' ? directMessages : korumMessages)!.map((msg: any) => 
+                        renderMessage(msg, chatType === 'korum')
+                      )}
                       <div ref={messagesEndRef} />
                     </div>
                   ) : (
@@ -448,6 +643,20 @@ export default function Messages() {
                   )}
                 </ScrollArea>
 
+                {/* Reply Preview */}
+                {replyingTo && (
+                  <div className="px-4 py-2 border-t bg-muted/50 flex items-center gap-2">
+                    <Reply className="h-4 w-4 text-muted-foreground" />
+                    <div className="flex-1 text-sm">
+                      <span className="font-medium">Replying to {replyingTo.senderName}: </span>
+                      <span className="text-muted-foreground truncate">{replyingTo.content.substring(0, 50)}...</span>
+                    </div>
+                    <Button size="sm" variant="ghost" onClick={() => setReplyingTo(null)}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+
                 {/* Input */}
                 <div className="p-4 border-t flex gap-2">
                   {(chatType === 'direct' || canPostInKorum) ? (
@@ -455,7 +664,7 @@ export default function Messages() {
                       <Input
                         placeholder={chatType === 'korum' && !canPostInKorum 
                           ? "Only admins can post in this group" 
-                          : "Type a message..."}
+                          : replyingTo ? "Reply to message..." : "Type a message..."}
                         value={message}
                         onChange={e => setMessage(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
