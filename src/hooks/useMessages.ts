@@ -4,6 +4,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { useEffect } from 'react';
 
+export interface MessageReaction {
+  id: string;
+  emoji: string;
+  user_id: string;
+  user_name?: string;
+}
+
 export interface Message {
   id: string;
   sender_id: string;
@@ -13,10 +20,17 @@ export interface Message {
   attachment_url: string | null;
   is_read: boolean;
   created_at: string;
+  reply_to_id: string | null;
   sender?: {
     full_name: string;
     avatar_url: string | null;
   };
+  reply_to?: {
+    id: string;
+    content: string;
+    sender_name: string;
+  };
+  reactions?: MessageReaction[];
 }
 
 export interface Conversation {
@@ -51,7 +65,6 @@ export function useConversations() {
 
       if (error) throw error;
 
-      // Get other user profiles and last messages
       const conversations = await Promise.all(
         (data || []).map(async (conv) => {
           const otherUserId = conv.participant_one === user.id ? conv.participant_two : conv.participant_one;
@@ -96,7 +109,6 @@ export function useMessages(otherUserId: string) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Subscribe to realtime messages
   useEffect(() => {
     if (!user || !otherUserId) return;
 
@@ -105,10 +117,9 @@ export function useMessages(otherUserId: string) {
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'messages',
-          filter: `or(and(sender_id=eq.${user.id},receiver_id=eq.${otherUserId}),and(sender_id=eq.${otherUserId},receiver_id=eq.${user.id}))`,
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ['messages', otherUserId] });
@@ -126,16 +137,57 @@ export function useMessages(otherUserId: string) {
     queryFn: async () => {
       if (!user) return [];
 
-      const { data, error } = await supabase
+      const { data: messages, error } = await supabase
         .from('messages')
-        .select(`
-          *,
-          sender:profiles!messages_sender_id_fkey(full_name, avatar_url)
-        `)
+        .select('*')
         .or(`and(sender_id.eq.${user.id},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${user.id})`)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
+
+      // Get sender profiles
+      const senderIds = [...new Set(messages?.map(m => m.sender_id) || [])];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, avatar_url')
+        .in('user_id', senderIds);
+
+      // Get reactions
+      const messageIds = messages?.map(m => m.id) || [];
+      const { data: reactions } = messageIds.length > 0
+        ? await supabase
+            .from('message_reactions')
+            .select('*')
+            .in('message_id', messageIds)
+        : { data: [] };
+
+      // Get reply-to messages
+      const replyToIds = messages?.filter(m => m.reply_to_id).map(m => m.reply_to_id) || [];
+      const { data: replyToMessages } = replyToIds.length > 0
+        ? await supabase
+            .from('messages')
+            .select('id, content, sender_id')
+            .in('id', replyToIds)
+        : { data: [] };
+
+      const profileMap = new Map<string, { user_id: string; full_name: string; avatar_url: string | null }>();
+      profiles?.forEach(p => profileMap.set(p.user_id, p));
+      
+      const replyToMap = new Map<string, { id: string; content: string; sender_id: string }>();
+      replyToMessages?.forEach((m: any) => replyToMap.set(m.id, m));
+
+      // Group reactions by message
+      const reactionsMap = new Map<string, MessageReaction[]>();
+      reactions?.forEach(r => {
+        const existing = reactionsMap.get(r.message_id) || [];
+        existing.push({
+          id: r.id,
+          emoji: r.emoji,
+          user_id: r.user_id,
+          user_name: profileMap.get(r.user_id)?.full_name,
+        });
+        reactionsMap.set(r.message_id, existing);
+      });
 
       // Mark messages as read
       await supabase
@@ -145,7 +197,19 @@ export function useMessages(otherUserId: string) {
         .eq('receiver_id', user.id)
         .eq('is_read', false);
 
-      return data;
+      return messages?.map(msg => {
+        const replyTo = msg.reply_to_id ? replyToMap.get(msg.reply_to_id) : null;
+        return {
+          ...msg,
+          sender: profileMap.get(msg.sender_id),
+          reactions: reactionsMap.get(msg.id) || [],
+          reply_to: replyTo ? {
+            id: replyTo.id,
+            content: replyTo.content,
+            sender_name: profileMap.get(replyTo.sender_id)?.full_name || 'Unknown',
+          } : undefined,
+        };
+      }) as Message[];
     },
     enabled: !!user && !!otherUserId,
   });
@@ -156,10 +220,9 @@ export function useSendMessage() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ receiverId, content }: { receiverId: string; content: string }) => {
+    mutationFn: async ({ receiverId, content, replyToId }: { receiverId: string; content: string; replyToId?: string }) => {
       if (!user) throw new Error('Must be logged in');
 
-      // Ensure conversation exists
       const { data: existingConv } = await supabase
         .from('conversations')
         .select('id')
@@ -180,13 +243,13 @@ export function useSendMessage() {
           .eq('id', existingConv.id);
       }
 
-      // Send message
       const { data, error } = await supabase
         .from('messages')
         .insert({
           sender_id: user.id,
           receiver_id: receiverId,
           content,
+          reply_to_id: replyToId || null,
         })
         .select()
         .single();
