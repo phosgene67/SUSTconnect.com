@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { APP_NAME, UNIVERSITY_EMAIL_DOMAIN } from '@/lib/constants';
 import { loginSchema, type LoginFormData } from '@/lib/validations';
 import { useToast } from '@/hooks/use-toast';
@@ -16,8 +17,11 @@ import logo from '@/assets/logo.png';
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [showVerificationMessage, setShowVerificationMessage] = useState(false);
+  const [lastEmail, setLastEmail] = useState('');
   const { toast } = useToast();
-  const { signIn } = useAuth();
+  const { signIn, resendVerificationEmail } = useAuth();
   const navigate = useNavigate();
 
   const {
@@ -28,17 +32,63 @@ export default function Login() {
     resolver: zodResolver(loginSchema),
   });
 
+  const handleResendVerification = async () => {
+    if (!lastEmail) return;
+    
+    setIsResending(true);
+    try {
+      const { error } = await resendVerificationEmail(lastEmail);
+      
+      if (error) {
+        toast({
+          title: 'Error',
+          description: error.message,
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      toast({
+        title: 'Verification email sent!',
+        description: 'Please check your inbox and spam folder.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to send verification email.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsResending(false);
+    }
+  };
+
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
+    setShowVerificationMessage(false);
+    setLastEmail(data.email);
+    
     try {
       const { error } = await signIn(data.email, data.password);
       
       if (error) {
-        toast({
-          title: 'Login failed',
-          description: error.message,
-          variant: 'destructive',
-        });
+        // Check for email not confirmed error
+        if (error.message.includes('Email not confirmed') || 
+            error.message.includes('Invalid login credentials')) {
+          // Show verification message for any login failure since Supabase returns generic error
+          setShowVerificationMessage(true);
+          toast({
+            title: 'Login failed',
+            description: 'Please check your credentials or verify your email address.',
+            variant: 'destructive',
+          });
+        } else {
+          toast({
+            title: 'Login failed',
+            description: error.message,
+            variant: 'destructive',
+          });
+        }
         return;
       }
       
@@ -82,6 +132,29 @@ export default function Login() {
           </CardHeader>
           <form onSubmit={handleSubmit(onSubmit)}>
             <CardContent className="space-y-4">
+              {showVerificationMessage && (
+                <Alert>
+                  <Mail className="h-4 w-4" />
+                  <AlertDescription className="ml-2">
+                    <p className="font-medium">Haven't verified your email yet?</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Check your inbox for a verification link, or click below to resend it.
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-2"
+                      onClick={handleResendVerification}
+                      disabled={isResending}
+                    >
+                      {isResending && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
+                      Resend verification email
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="email">University Email</Label>
                 <Input
