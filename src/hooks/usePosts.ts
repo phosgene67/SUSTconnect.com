@@ -86,17 +86,29 @@ export function usePost(postId: string) {
 
   return useQuery({
     queryKey: ['post', postId],
-    queryFn: async () => {
-      const { data, error } = await supabase
+    queryFn: async (): Promise<Post | null> => {
+      const { data: post, error } = await supabase
         .from('posts')
-        .select(`
-          *,
-          author:profiles!posts_author_id_fkey(full_name, avatar_url, department, batch)
-        `)
+        .select('*')
         .eq('id', postId)
         .single();
 
       if (error) throw error;
+      if (!post) return null;
+
+      // Get author profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, avatar_url, department, batch')
+        .eq('user_id', post.author_id)
+        .single();
+
+      let result: Post = {
+        ...post,
+        tags: post.tags || [],
+        author: profile || undefined,
+        user_vote: 0,
+      };
 
       // Get user vote if logged in
       if (user) {
@@ -106,12 +118,12 @@ export function usePost(postId: string) {
           .eq('user_id', user.id)
           .eq('target_id', postId)
           .eq('target_type', 'post')
-          .single();
+          .maybeSingle();
 
-        return { ...data, user_vote: vote?.value || 0 };
+        result.user_vote = vote?.value || 0;
       }
 
-      return data;
+      return result;
     },
     enabled: !!postId,
   });

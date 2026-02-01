@@ -116,9 +116,11 @@ function PostCard({ post }: { post: Post }) {
             </div>
 
             {/* Title */}
-            <h3 className="font-semibold text-lg mb-2 line-clamp-2 hover:text-primary cursor-pointer">
-              {post.title}
-            </h3>
+            <Link to={`/post/${post.id}`}>
+              <h3 className="font-semibold text-lg mb-2 line-clamp-2 hover:text-primary cursor-pointer">
+                {post.title}
+              </h3>
+            </Link>
 
             {/* Content preview */}
             <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
@@ -138,9 +140,11 @@ function PostCard({ post }: { post: Post }) {
 
             {/* Actions */}
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" className="h-8 text-muted-foreground">
-                <MessageCircle className="h-4 w-4 mr-1" />
-                {post.comment_count || 0} Comments
+              <Button variant="ghost" size="sm" className="h-8 text-muted-foreground" asChild>
+                <Link to={`/post/${post.id}`}>
+                  <MessageCircle className="h-4 w-4 mr-1" />
+                  {post.comment_count || 0} Comments
+                </Link>
               </Button>
               <Button variant="ghost" size="sm" className="h-8 text-muted-foreground">
                 <Bookmark className="h-4 w-4 mr-1" />
