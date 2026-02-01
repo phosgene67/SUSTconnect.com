@@ -54,7 +54,7 @@ export function Sidebar() {
     <aside className="hidden lg:flex lg:flex-col lg:w-64 border-r border-border bg-sidebar">
       {/* Logo */}
       <Link to="/feed" className="flex h-16 items-center px-6 border-b border-sidebar-border">
-        <img src={logo} alt={APP_NAME} className="h-9 w-auto" />
+        <img src={logo} alt={APP_NAME} className="h-10 w-auto" />
       </Link>
 
       {/* Search */}
