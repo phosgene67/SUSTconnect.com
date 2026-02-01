@@ -14,6 +14,328 @@ export type Database = {
   }
   public: {
     Tables: {
+      announcements: {
+        Row: {
+          author_id: string
+          content: string
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          is_pinned: boolean | null
+          priority: Database["public"]["Enums"]["announcement_priority"] | null
+          target_type: Database["public"]["Enums"]["announcement_target"] | null
+          target_value: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          author_id: string
+          content: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_pinned?: boolean | null
+          priority?: Database["public"]["Enums"]["announcement_priority"] | null
+          target_type?:
+            | Database["public"]["Enums"]["announcement_target"]
+            | null
+          target_value?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          author_id?: string
+          content?: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_pinned?: boolean | null
+          priority?: Database["public"]["Enums"]["announcement_priority"] | null
+          target_type?:
+            | Database["public"]["Enums"]["announcement_target"]
+            | null
+          target_value?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      comments: {
+        Row: {
+          author_id: string
+          content: string
+          created_at: string | null
+          downvotes: number | null
+          id: string
+          parent_id: string | null
+          post_id: string
+          updated_at: string | null
+          upvotes: number | null
+        }
+        Insert: {
+          author_id: string
+          content: string
+          created_at?: string | null
+          downvotes?: number | null
+          id?: string
+          parent_id?: string | null
+          post_id: string
+          updated_at?: string | null
+          upvotes?: number | null
+        }
+        Update: {
+          author_id?: string
+          content?: string
+          created_at?: string | null
+          downvotes?: number | null
+          id?: string
+          parent_id?: string | null
+          post_id?: string
+          updated_at?: string | null
+          upvotes?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversations: {
+        Row: {
+          created_at: string | null
+          id: string
+          last_message_at: string | null
+          participant_one: string
+          participant_two: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          last_message_at?: string | null
+          participant_one: string
+          participant_two: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          last_message_at?: string | null
+          participant_one?: string
+          participant_two?: string
+        }
+        Relationships: []
+      }
+      korum_members: {
+        Row: {
+          id: string
+          joined_at: string | null
+          korum_id: string
+          role: Database["public"]["Enums"]["korum_member_role"] | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          joined_at?: string | null
+          korum_id: string
+          role?: Database["public"]["Enums"]["korum_member_role"] | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          joined_at?: string | null
+          korum_id?: string
+          role?: Database["public"]["Enums"]["korum_member_role"] | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "korum_members_korum_id_fkey"
+            columns: ["korum_id"]
+            isOneToOne: false
+            referencedRelation: "korums"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      korums: {
+        Row: {
+          avatar_url: string | null
+          cover_url: string | null
+          created_at: string | null
+          created_by: string
+          description: string | null
+          id: string
+          is_private: boolean | null
+          member_count: number | null
+          name: string
+          type: Database["public"]["Enums"]["korum_type"]
+          updated_at: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          cover_url?: string | null
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          id?: string
+          is_private?: boolean | null
+          member_count?: number | null
+          name: string
+          type?: Database["public"]["Enums"]["korum_type"]
+          updated_at?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          cover_url?: string | null
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_private?: boolean | null
+          member_count?: number | null
+          name?: string
+          type?: Database["public"]["Enums"]["korum_type"]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      messages: {
+        Row: {
+          attachment_url: string | null
+          content: string
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          korum_id: string | null
+          receiver_id: string | null
+          sender_id: string
+        }
+        Insert: {
+          attachment_url?: string | null
+          content: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          korum_id?: string | null
+          receiver_id?: string | null
+          sender_id: string
+        }
+        Update: {
+          attachment_url?: string | null
+          content?: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          korum_id?: string | null
+          receiver_id?: string | null
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_korum_id_fkey"
+            columns: ["korum_id"]
+            isOneToOne: false
+            referencedRelation: "korums"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          body: string
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          link_url: string | null
+          title: string
+          type: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          link_url?: string | null
+          title: string
+          type: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          link_url?: string | null
+          title?: string
+          type?: Database["public"]["Enums"]["notification_type"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      posts: {
+        Row: {
+          author_id: string
+          category: Database["public"]["Enums"]["post_category"]
+          comment_count: number | null
+          content: string
+          created_at: string | null
+          downvotes: number | null
+          id: string
+          korum_id: string | null
+          tags: string[] | null
+          title: string
+          updated_at: string | null
+          upvotes: number | null
+        }
+        Insert: {
+          author_id: string
+          category?: Database["public"]["Enums"]["post_category"]
+          comment_count?: number | null
+          content: string
+          created_at?: string | null
+          downvotes?: number | null
+          id?: string
+          korum_id?: string | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string | null
+          upvotes?: number | null
+        }
+        Update: {
+          author_id?: string
+          category?: Database["public"]["Enums"]["post_category"]
+          comment_count?: number | null
+          content?: string
+          created_at?: string | null
+          downvotes?: number | null
+          id?: string
+          korum_id?: string | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string | null
+          upvotes?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "posts_korum_id_fkey"
+            columns: ["korum_id"]
+            isOneToOne: false
+            referencedRelation: "korums"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           achievements: string[] | null
@@ -65,6 +387,35 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_posts: {
+        Row: {
+          created_at: string | null
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_posts_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -83,6 +434,33 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      votes: {
+        Row: {
+          created_at: string | null
+          id: string
+          target_id: string
+          target_type: string
+          user_id: string
+          value: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          target_id: string
+          target_type: string
+          user_id: string
+          value: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          target_id?: string
+          target_type?: string
+          user_id?: string
+          value?: number
         }
         Relationships: []
       }
