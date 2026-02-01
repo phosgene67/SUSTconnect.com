@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { MainLayout, MobileNav } from '@/components/layout';
 import { usePosts, useVote, Post } from '@/hooks/usePosts';
 import { useAuth } from '@/contexts/AuthContext';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -22,7 +24,7 @@ import {
   ArrowBigDown,
   MessageCircle,
   Bookmark,
-  Bell,
+  AlertCircle,
 } from 'lucide-react';
 
 const categoryColors: Record<string, string> = {
@@ -41,18 +43,87 @@ const categoryLabels: Record<string, string> = {
   resource: 'Resource',
 };
 
-const trendingTopics = [
-  { name: 'Final Exams', posts: 124 },
-  { name: 'Thesis Defense', posts: 89 },
-  { name: 'Career Fair 2026', posts: 67 },
-  { name: 'CSE Project Ideas', posts: 45 },
-];
+const categoryIcons: Record<string, typeof HelpCircle> = {
+  academic_help: HelpCircle,
+  project: FolderKanban,
+  notice: AlertCircle,
+  question: MessageSquare,
+  resource: BookOpen,
+};
 
-const categories = [
-  { name: 'Academic Help', icon: HelpCircle, color: 'bg-primary/10 text-primary', count: 234, value: 'academic_help' },
-  { name: 'Projects', icon: FolderKanban, color: 'bg-green-500/10 text-green-500', count: 156, value: 'project' },
-  { name: 'Resources', icon: BookOpen, color: 'bg-pink-500/10 text-pink-500', count: 89, value: 'resource' },
-];
+const categoryIconColors: Record<string, string> = {
+  academic_help: 'bg-primary/10 text-primary',
+  project: 'bg-green-500/10 text-green-500',
+  notice: 'bg-orange-500/10 text-orange-500',
+  question: 'bg-purple-500/10 text-purple-500',
+  resource: 'bg-pink-500/10 text-pink-500',
+};
+
+// Hook to fetch category counts
+function useCategoryCounts() {
+  return useQuery({
+    queryKey: ['category-counts'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('posts')
+        .select('category');
+      
+      if (error) throw error;
+      
+      const counts: Record<string, number> = {};
+      data?.forEach(post => {
+        counts[post.category] = (counts[post.category] || 0) + 1;
+      });
+      return counts;
+    },
+  });
+}
+
+// Hook to fetch trending tags
+function useTrendingTags() {
+  return useQuery({
+    queryKey: ['trending-tags'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('posts')
+        .select('tags')
+        .not('tags', 'is', null);
+      
+      if (error) throw error;
+      
+      const tagCounts: Record<string, number> = {};
+      data?.forEach(post => {
+        post.tags?.forEach((tag: string) => {
+          tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+        });
+      });
+      
+      return Object.entries(tagCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([name, posts]) => ({ name, posts }));
+    },
+  });
+}
+
+// Hook to fetch latest announcements
+function useLatestAnnouncements() {
+  return useQuery({
+    queryKey: ['latest-announcements'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('announcements')
+        .select('id, title, priority, created_at')
+        .or('expires_at.is.null,expires_at.gt.now()')
+        .order('is_pinned', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(3);
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+}
 
 function PostCard({ post }: { post: Post }) {
   const { user } = useAuth();
@@ -161,6 +232,11 @@ function PostCard({ post }: { post: Post }) {
 export default function Feed() {
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
   const { data: posts, isLoading } = usePosts(selectedCategory);
+  const { data: categoryCounts } = useCategoryCounts();
+  const { data: trendingTags } = useTrendingTags();
+  const { data: latestAnnouncements } = useLatestAnnouncements();
+
+  const allCategories = ['academic_help', 'project', 'notice', 'question', 'resource'];
 
   return (
     <MainLayout>
@@ -243,50 +319,58 @@ export default function Feed() {
               <CardTitle className="text-base">Browse by Category</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {categories.map((cat) => (
-                <button
-                  key={cat.name}
-                  onClick={() => setSelectedCategory(selectedCategory === cat.value ? undefined : cat.value)}
-                  className={`flex items-center justify-between p-2 rounded-md w-full transition-colors ${
-                    selectedCategory === cat.value ? 'bg-primary/10' : 'hover:bg-muted'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-md ${cat.color}`}>
-                      <cat.icon className="h-4 w-4" />
+              {allCategories.map((catValue) => {
+                const Icon = categoryIcons[catValue];
+                const count = categoryCounts?.[catValue] || 0;
+                return (
+                  <button
+                    key={catValue}
+                    onClick={() => setSelectedCategory(selectedCategory === catValue ? undefined : catValue)}
+                    className={`flex items-center justify-between p-2 rounded-md w-full transition-colors ${
+                      selectedCategory === catValue ? 'bg-primary/10' : 'hover:bg-muted'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-md ${categoryIconColors[catValue]}`}>
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <span className="text-sm font-medium">{categoryLabels[catValue]}</span>
                     </div>
-                    <span className="text-sm font-medium">{cat.name}</span>
-                  </div>
-                  <span className="text-xs text-muted-foreground">{cat.count}</span>
-                </button>
-              ))}
+                    <span className="text-xs text-muted-foreground">{count}</span>
+                  </button>
+                );
+              })}
             </CardContent>
           </Card>
 
-          {/* Trending Topics */}
+          {/* Trending Tags */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-primary" />
-                Trending
+                Trending Tags
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {trendingTopics.map((topic, i) => (
-                <Link
-                  key={topic.name}
-                  to={`/search?q=${encodeURIComponent(topic.name)}`}
-                  className="flex items-center gap-3 group"
-                >
-                  <span className="text-xs text-muted-foreground w-4">{i + 1}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">
-                      {topic.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{topic.posts} posts</p>
-                  </div>
-                </Link>
-              ))}
+              {trendingTags && trendingTags.length > 0 ? (
+                trendingTags.map((tag, i) => (
+                  <Link
+                    key={tag.name}
+                    to={`/search?q=${encodeURIComponent(tag.name)}`}
+                    className="flex items-center gap-3 group"
+                  >
+                    <span className="text-xs text-muted-foreground w-4">{i + 1}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">
+                        #{tag.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{tag.posts} post{tag.posts !== 1 ? 's' : ''}</p>
+                    </div>
+                  </Link>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">No trending tags yet</p>
+              )}
             </CardContent>
           </Card>
 
@@ -294,14 +378,33 @@ export default function Feed() {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
-                <Megaphone className="h-4 w-4 text-orange-500" />
+                <Megaphone className="h-4 w-4 text-destructive" />
                 Latest Announcements
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">
-                No announcements at the moment.
-              </p>
+              {latestAnnouncements && latestAnnouncements.length > 0 ? (
+                <div className="space-y-3">
+                  {latestAnnouncements.map((announcement) => (
+                    <Link
+                      key={announcement.id}
+                      to="/announcements"
+                      className="block group"
+                    >
+                      <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">
+                        {announcement.title}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDistanceToNow(new Date(announcement.created_at), { addSuffix: true })}
+                      </p>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No announcements at the moment.
+                </p>
+              )}
               <Button variant="link" className="px-0 mt-2" asChild>
                 <Link to="/announcements">View all announcements →</Link>
               </Button>
