@@ -66,7 +66,7 @@ export default function Login() {
           <img 
             src={logo} 
             alt={APP_NAME} 
-            className="h-32 sm:h-40 md:h-48 w-auto mx-auto mb-4 object-contain"
+            className="h-64 sm:h-72 md:h-96 w-auto mx-auto mb-4 object-contain"
           />
           <p className="text-muted-foreground text-sm sm:text-base">
             Your private academic community
