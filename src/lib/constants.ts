@@ -65,6 +65,8 @@ export const KORUM_TYPES = {
 
 // Departments list
 export const DEPARTMENTS = [
+  'Computer Science & Engineering',
+  'Electrical & Electronic Engineering',
   'Civil Engineering',
   'Mechanical Engineering',
   'Industrial & Production Engineering',
