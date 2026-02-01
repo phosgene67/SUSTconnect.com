@@ -14,16 +14,115 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          achievements: string[] | null
+          avatar_url: string | null
+          batch: string
+          bio: string | null
+          created_at: string
+          department: string
+          full_name: string
+          id: string
+          skills: string[] | null
+          social_github: string | null
+          social_linkedin: string | null
+          social_portfolio: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          achievements?: string[] | null
+          avatar_url?: string | null
+          batch: string
+          bio?: string | null
+          created_at?: string
+          department: string
+          full_name: string
+          id?: string
+          skills?: string[] | null
+          social_github?: string | null
+          social_linkedin?: string | null
+          social_portfolio?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          achievements?: string[] | null
+          avatar_url?: string | null
+          batch?: string
+          bio?: string | null
+          created_at?: string
+          department?: string
+          full_name?: string
+          id?: string
+          skills?: string[] | null
+          social_github?: string | null
+          social_linkedin?: string | null
+          social_portfolio?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      announcement_priority: "normal" | "important" | "urgent"
+      announcement_target: "university" | "department" | "batch" | "korum"
+      app_role: "student" | "teacher" | "admin"
+      korum_member_role: "admin" | "moderator" | "member"
+      korum_type: "batch" | "department" | "project" | "club" | "course"
+      notification_type:
+        | "message"
+        | "comment"
+        | "reply"
+        | "mention"
+        | "announcement"
+        | "korum_invite"
+        | "upvote"
+      post_category:
+        | "academic_help"
+        | "project"
+        | "notice"
+        | "question"
+        | "resource"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +249,28 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      announcement_priority: ["normal", "important", "urgent"],
+      announcement_target: ["university", "department", "batch", "korum"],
+      app_role: ["student", "teacher", "admin"],
+      korum_member_role: ["admin", "moderator", "member"],
+      korum_type: ["batch", "department", "project", "club", "course"],
+      notification_type: [
+        "message",
+        "comment",
+        "reply",
+        "mention",
+        "announcement",
+        "korum_invite",
+        "upvote",
+      ],
+      post_category: [
+        "academic_help",
+        "project",
+        "notice",
+        "question",
+        "resource",
+      ],
+    },
   },
 } as const
