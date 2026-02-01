@@ -12,6 +12,7 @@ import Profile from "./pages/Profile";
 import Notifications from "./pages/Notifications";
 import Announcements from "./pages/Announcements";
 import Korums from "./pages/Korums";
+import KorumDetail from "./pages/KorumDetail";
 import Messages from "./pages/Messages";
 import CreatePost from "./pages/CreatePost";
 import Settings from "./pages/Settings";
@@ -35,6 +36,7 @@ const App = () => (
             <Route path="/feed" element={<Feed />} />
             <Route path="/post/:postId" element={<PostDetail />} />
             <Route path="/korums" element={<Korums />} />
+            <Route path="/korums/:korumId" element={<KorumDetail />} />
             <Route path="/messages" element={<Messages />} />
             <Route path="/announcements" element={<Announcements />} />
             <Route path="/notifications" element={<Notifications />} />
