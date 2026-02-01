@@ -123,11 +123,16 @@ export default function Korums() {
                     <DialogTitle>Create Korum</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4">
-                    <Input
-                      placeholder="Korum name"
-                      value={form.name}
-                      onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
-                    />
+                    <div>
+                      <Input
+                        placeholder="e.g., EEE 2020, EEE Study Group"
+                        value={form.name}
+                        onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Examples: EEE Batch 2021, EEE Circuit Lab, EEE Project Team
+                      </p>
+                    </div>
                     <Textarea
                       placeholder="Description (optional)"
                       value={form.description}
