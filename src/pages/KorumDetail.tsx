@@ -5,6 +5,8 @@ import { useKorum, useJoinKorum, useLeaveKorum, Korum } from '@/hooks/useKorums'
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useImageUpload } from '@/hooks/useImageUpload';
+import { ImageUpload } from '@/components/ImageUpload';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,6 +59,36 @@ export default function KorumDetail() {
     description: '',
     is_private: false,
     admin_only_posting: false,
+    avatar_url: '',
+  });
+
+  // Update korum avatar
+  const updateKorumAvatar = useMutation({
+    mutationFn: async (avatarUrl: string) => {
+      const { error } = await supabase
+        .from('korums')
+        .update({ avatar_url: avatarUrl })
+        .eq('id', korumId!)
+        .eq('created_by', user!.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['korum', korumId] });
+      queryClient.invalidateQueries({ queryKey: ['korums'] });
+      toast({ title: 'Success', description: 'Korum photo updated!' });
+    },
+    onError: (error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const { upload: uploadKorumAvatar, isUploading: isUploadingAvatar } = useImageUpload({
+    bucket: 'korum-images',
+    folder: korumId,
+    onSuccess: (url) => {
+      updateKorumAvatar.mutate(url);
+    },
   });
 
   // Get korum members
@@ -125,6 +157,7 @@ export default function KorumDetail() {
         description: korum.description || '',
         is_private: korum.is_private || false,
         admin_only_posting: korum.admin_only_posting || false,
+        avatar_url: korum.avatar_url || '',
       });
       setIsEditingSettings(true);
     }
@@ -204,12 +237,21 @@ export default function KorumDetail() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex flex-col md:flex-row gap-6">
-              <Avatar className="h-24 w-24">
-                <AvatarImage src={korum.avatar_url || undefined} />
-                <AvatarFallback className="text-2xl">
-                  <Users className="h-10 w-10" />
-                </AvatarFallback>
-              </Avatar>
+              {isAdmin ? (
+                <ImageUpload
+                  currentImage={korum.avatar_url}
+                  onUpload={uploadKorumAvatar}
+                  isUploading={isUploadingAvatar}
+                  type="korum"
+                />
+              ) : (
+                <Avatar className="h-24 w-24">
+                  <AvatarImage src={korum.avatar_url || undefined} />
+                  <AvatarFallback className="text-2xl">
+                    <Users className="h-10 w-10" />
+                  </AvatarFallback>
+                </Avatar>
+              )}
 
               <div className="flex-1">
                 <div className="flex items-start justify-between flex-wrap gap-4">

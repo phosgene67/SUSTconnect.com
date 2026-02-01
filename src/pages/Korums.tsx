@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { MainLayout, MobileNav } from '@/components/layout';
 import { useKorums, useCreateKorum, useJoinKorum, useLeaveKorum, Korum } from '@/hooks/useKorums';
 import { useAuth } from '@/contexts/AuthContext';
+import { useImageUpload } from '@/hooks/useImageUpload';
+import { ImageUpload } from '@/components/ImageUpload';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,13 +57,28 @@ export default function Korums() {
     description: '',
     type: 'project',
     is_private: false,
+    avatar_url: '',
+  });
+
+  const { upload: uploadKorumAvatar, isUploading: isUploadingAvatar } = useImageUpload({
+    bucket: 'korum-images',
+    folder: 'avatars',
+    onSuccess: (url) => {
+      setForm(prev => ({ ...prev, avatar_url: url }));
+    },
   });
 
   const handleCreate = () => {
-    createKorum.mutate(form, {
+    createKorum.mutate({
+      name: form.name,
+      description: form.description,
+      type: form.type,
+      is_private: form.is_private,
+      avatar_url: form.avatar_url || undefined,
+    }, {
       onSuccess: () => {
         setIsDialogOpen(false);
-        setForm({ name: '', description: '', type: 'project', is_private: false });
+        setForm({ name: '', description: '', type: 'project', is_private: false, avatar_url: '' });
       },
     });
   };
@@ -123,6 +140,16 @@ export default function Korums() {
                     <DialogTitle>Create Korum</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4">
+                    {/* Korum Avatar Upload */}
+                    <div className="flex justify-center">
+                      <ImageUpload
+                        currentImage={form.avatar_url}
+                        onUpload={uploadKorumAvatar}
+                        isUploading={isUploadingAvatar}
+                        type="korum"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground text-center">Click to upload korum photo</p>
                     <div>
                       <Input
                         placeholder="e.g., EEE 2020, EEE Study Group"
@@ -167,7 +194,7 @@ export default function Korums() {
                     </div>
                     <Button 
                       onClick={handleCreate} 
-                      disabled={!form.name || createKorum.isPending}
+                      disabled={!form.name || createKorum.isPending || isUploadingAvatar}
                       className="w-full"
                     >
                       {createKorum.isPending ? 'Creating...' : 'Create Korum'}

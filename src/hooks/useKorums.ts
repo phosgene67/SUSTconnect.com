@@ -93,7 +93,7 @@ export function useCreateKorum() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async (korum: { name: string; description?: string; type: string; is_private?: boolean }) => {
+    mutationFn: async (korum: { name: string; description?: string; type: string; is_private?: boolean; avatar_url?: string; cover_url?: string }) => {
       if (!user) throw new Error('Must be logged in');
 
       const { data, error } = await supabase
@@ -103,6 +103,8 @@ export function useCreateKorum() {
           description: korum.description || null,
           type: korum.type as any,
           is_private: korum.is_private || false,
+          avatar_url: korum.avatar_url || null,
+          cover_url: korum.cover_url || null,
           created_by: user.id,
         })
         .select()
