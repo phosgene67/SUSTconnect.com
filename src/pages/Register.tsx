@@ -83,16 +83,16 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-12">
+    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-6">
       <div className="w-full max-w-md">
         {/* Logo and branding - Facebook/Reddit style */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-4">
           <img 
             src={logo} 
             alt={APP_NAME} 
-            className="h-64 sm:h-72 md:h-96 w-auto mx-auto mb-4 object-contain"
+            className="h-24 sm:h-28 md:h-32 w-auto mx-auto mb-2 object-contain"
           />
-          <p className="text-muted-foreground text-sm sm:text-base">
+          <p className="text-muted-foreground text-sm">
             Join your university community
           </p>
         </div>
