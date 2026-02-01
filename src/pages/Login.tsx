@@ -11,6 +11,7 @@ import { APP_NAME, UNIVERSITY_EMAIL_DOMAIN } from '@/lib/constants';
 import { loginSchema, type LoginFormData } from '@/lib/validations';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import logo from '@/assets/logo.png';
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
@@ -62,10 +63,7 @@ export default function Login() {
       <div className="w-full max-w-md">
         {/* Logo and branding */}
         <div className="text-center mb-8">
-          <div className="inline-flex h-14 w-14 items-center justify-center rounded-xl bg-primary text-primary-foreground font-bold text-xl mb-4">
-            SC
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight">{APP_NAME}</h1>
+          <img src={logo} alt={APP_NAME} className="h-16 w-auto mx-auto mb-4" />
           <p className="text-muted-foreground mt-1">
             Your private academic community
           </p>
