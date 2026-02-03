@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
@@ -83,8 +84,9 @@ export function usePosts(category?: string, korumId?: string) {
 
 export function usePost(postId: string) {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ['post', postId],
     queryFn: async (): Promise<Post | null> => {
       const { data: post, error } = await supabase
@@ -127,6 +129,35 @@ export function usePost(postId: string) {
     },
     enabled: !!postId,
   });
+
+  // Real-time subscription for post votes
+  useEffect(() => {
+    if (!postId) return;
+
+    const channel = supabase
+      .channel(`post_votes:${postId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'votes',
+          filter: `target_id=eq.${postId}`,
+        },
+        () => {
+          // Refetch post to get updated vote counts
+          queryClient.invalidateQueries({ queryKey: ['post', postId] });
+          queryClient.invalidateQueries({ queryKey: ['posts'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [postId, queryClient]);
+
+  return query;
 }
 
 export function useCreatePost() {
@@ -208,11 +239,88 @@ export function useVote() {
         .from(table)
         .update({ upvotes, downvotes })
         .eq('id', targetId);
+
+      return { targetId, targetType, upvotes, downvotes };
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['posts'] });
-      queryClient.invalidateQueries({ queryKey: ['post'] });
-      queryClient.invalidateQueries({ queryKey: ['comments'] });
+    onMutate: async ({ targetId, targetType, value }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: targetType === 'post' ? ['posts'] : ['comments'] });
+      await queryClient.cancelQueries({ queryKey: targetType === 'post' ? ['post', targetId] : ['comments'] });
+
+      // Get previous data
+      const postsData = queryClient.getQueryData(['posts']) as Post[] | undefined;
+      const postData = queryClient.getQueryData(['post', targetId]) as Post | undefined;
+      const commentsData = queryClient.getQueryData(['comments', targetId]) as any[];
+
+      // Optimistically update posts
+      if (postsData) {
+        queryClient.setQueryData(['posts'], (old: Post[]) =>
+          old.map(post => {
+            if (post.id === targetId && targetType === 'post') {
+              const oldVote = post.user_vote || 0;
+              const diff = value - oldVote;
+              return {
+                ...post,
+                user_vote: value,
+                upvotes: post.upvotes + (value === 1 ? 1 : oldVote === 1 ? -1 : 0),
+                downvotes: post.downvotes + (value === -1 ? 1 : oldVote === -1 ? -1 : 0),
+              };
+            }
+            return post;
+          })
+        );
+      }
+
+      // Optimistically update single post
+      if (postData && targetType === 'post') {
+        const oldVote = postData.user_vote || 0;
+        queryClient.setQueryData(['post', targetId], {
+          ...postData,
+          user_vote: value,
+          upvotes: postData.upvotes + (value === 1 ? 1 : oldVote === 1 ? -1 : 0),
+          downvotes: postData.downvotes + (value === -1 ? 1 : oldVote === -1 ? -1 : 0),
+        });
+      }
+
+      // Optimistically update comments
+      if (commentsData && targetType === 'comment') {
+        const updateComment = (comments: any[]): any[] =>
+          comments.map(comment => {
+            if (comment.id === targetId) {
+              const oldVote = comment.user_vote || 0;
+              return {
+                ...comment,
+                user_vote: value,
+                upvotes: comment.upvotes + (value === 1 ? 1 : oldVote === 1 ? -1 : 0),
+                downvotes: comment.downvotes + (value === -1 ? 1 : oldVote === -1 ? -1 : 0),
+              };
+            }
+            return {
+              ...comment,
+              replies: comment.replies ? updateComment(comment.replies) : undefined,
+            };
+          });
+
+        queryClient.setQueryData(['comments', targetId], (old: any[]) => updateComment(old));
+      }
+
+      return { postsData, postData, commentsData };
+    },
+    onError: (_, __, context) => {
+      // Rollback on error
+      if (context?.postsData) {
+        queryClient.setQueryData(['posts'], context.postsData);
+      }
+      if (context?.postData) {
+        queryClient.setQueryData(['post', context.postData.id], context.postData);
+      }
+      if (context?.commentsData) {
+        const postId = Array.isArray(context.commentsData) ? context.commentsData[0]?.post_id : undefined;
+        if (postId) {
+          queryClient.setQueryData(['comments', postId], context.commentsData);
+        }
+      }
+      toast({ title: 'Error', description: 'Failed to update vote', variant: 'destructive' });
     },
   });
 }

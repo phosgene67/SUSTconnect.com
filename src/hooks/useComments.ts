@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
@@ -22,10 +23,33 @@ export interface Comment {
   replies?: Comment[];
 }
 
+// Helper function to build nested comment structure
+const buildNestedComments = (comments: Comment[]): Comment[] => {
+  const commentMap = new Map<string, any>();
+  const rootComments: any[] = [];
+
+  comments.forEach(comment => {
+    commentMap.set(comment.id, { ...comment, replies: [] });
+  });
+
+  comments.forEach(comment => {
+    const c = commentMap.get(comment.id)!;
+    if (comment.parent_id && commentMap.has(comment.parent_id)) {
+      commentMap.get(comment.parent_id)!.replies!.push(c);
+    } else {
+      rootComments.push(c);
+    }
+  });
+
+  return rootComments;
+};
+
 export function useComments(postId: string) {
   const { user } = useAuth();
 
-  return useQuery({
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
     queryKey: ['comments', postId],
     queryFn: async () => {
       const { data: rawComments, error } = await supabase
@@ -68,26 +92,77 @@ export function useComments(postId: string) {
       }
 
       // Build nested structure
-      const commentMap = new Map<string, any>();
-      const rootComments: any[] = [];
-
-      commentsWithVotes?.forEach(comment => {
-        commentMap.set(comment.id, { ...comment, replies: [] });
-      });
-
-      commentsWithVotes?.forEach(comment => {
-        const c = commentMap.get(comment.id)!;
-        if (comment.parent_id && commentMap.has(comment.parent_id)) {
-          commentMap.get(comment.parent_id)!.replies!.push(c);
-        } else {
-          rootComments.push(c);
-        }
-      });
-
-      return rootComments;
+      return buildNestedComments(commentsWithVotes || []);
     },
     enabled: !!postId,
   });
+
+  // Real-time subscription for new comments
+  useEffect(() => {
+    if (!postId) return;
+
+    const channel = supabase
+      .channel(`comments:${postId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'comments',
+          filter: `post_id=eq.${postId}`,
+        },
+        (payload) => {
+          // Get author profile and refetch comments
+          queryClient.invalidateQueries({ queryKey: ['comments', postId] });
+          queryClient.invalidateQueries({ queryKey: ['post', postId] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'comments',
+          filter: `post_id=eq.${postId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['comments', postId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [postId, queryClient]);
+
+  // Real-time subscription for comment votes
+  useEffect(() => {
+    if (!postId) return;
+
+    const channel = supabase
+      .channel(`comment_votes:${postId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'votes',
+          filter: `target_type=eq.comment`,
+        },
+        () => {
+          // Refetch comments to get updated vote counts
+          queryClient.invalidateQueries({ queryKey: ['comments', postId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [postId, queryClient]);
+
+  return query;
 }
 
 export function useCreateComment() {
