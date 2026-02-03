@@ -32,7 +32,7 @@ const categories = [
 export default function CreatePost() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const createPost = useCreatePost();
   const { data: korums } = useKorums();
 
@@ -55,6 +55,37 @@ export default function CreatePost() {
       }));
     }
   }, [searchParams]);
+
+  // Show loading state while auth is initializing
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="max-w-2xl mx-auto">
+          <Card>
+            <CardContent className="p-12 text-center">
+              <p className="text-muted-foreground">Loading...</p>
+            </CardContent>
+          </Card>
+        </div>
+        <MobileNav />
+      </MainLayout>
+    );
+  }
+
+  if (!user) {
+    return (
+      <MainLayout>
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">Please log in to create a post</p>
+          <Button className="mt-4" onClick={() => navigate('/login')}>Log In</Button>
+        </div>
+        <MobileNav />
+      </MainLayout>
+    );
+  }
+
+  const selectedCategory = categories.find(c => c.value === form.category);
+  const userKorums = ((korums as Korum[] | undefined) || []).filter(k => k.is_member);
 
   const addTag = () => {
     if (newTag.trim() && !form.tags.includes(newTag.trim()) && form.tags.length < 5) {
@@ -92,21 +123,6 @@ export default function CreatePost() {
       },
     });
   };
-
-  if (!user) {
-    return (
-      <MainLayout>
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">Please log in to create a post</p>
-          <Button className="mt-4" onClick={() => navigate('/login')}>Log In</Button>
-        </div>
-        <MobileNav />
-      </MainLayout>
-    );
-  }
-
-  const selectedCategory = categories.find(c => c.value === form.category);
-  const userKorums = ((korums as Korum[] | undefined) || []).filter(k => k.is_member);
 
   return (
     <MainLayout>
