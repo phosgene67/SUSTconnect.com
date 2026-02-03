@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { MainLayout, MobileNav } from '@/components/layout';
 import { useCreatePost } from '@/hooks/usePosts';
 import { useKorums, Korum } from '@/hooks/useKorums';
@@ -31,6 +31,7 @@ const categories = [
 
 export default function CreatePost() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const createPost = useCreatePost();
   const { data: korums } = useKorums();
@@ -43,6 +44,17 @@ export default function CreatePost() {
     korum_id: '',
   });
   const [newTag, setNewTag] = useState('');
+
+  // Pre-fill korum if coming from korum detail page
+  useEffect(() => {
+    const korumParam = searchParams.get('korum');
+    if (korumParam) {
+      setForm(prev => ({
+        ...prev,
+        korum_id: korumParam,
+      }));
+    }
+  }, [searchParams]);
 
   const addTag = () => {
     if (newTag.trim() && !form.tags.includes(newTag.trim()) && form.tags.length < 5) {
@@ -72,7 +84,11 @@ export default function CreatePost() {
       korum_id: form.korum_id || undefined,
     }, {
       onSuccess: () => {
-        navigate('/feed');
+        if (form.korum_id) {
+          navigate(`/korum/${form.korum_id}`);
+        } else {
+          navigate('/feed');
+        }
       },
     });
   };
