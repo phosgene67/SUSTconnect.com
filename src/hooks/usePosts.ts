@@ -28,8 +28,9 @@ export interface Post {
 
 export function usePosts(category?: string, korumId?: string) {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ['posts', category, korumId],
     queryFn: async () => {
       let query = supabase
@@ -80,6 +81,30 @@ export function usePosts(category?: string, korumId?: string) {
       return data;
     },
   });
+
+  // Real-time subscription for post changes (comments, votes, etc)
+  useEffect(() => {
+    const channel = supabase
+      .channel('posts_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'posts',
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['posts', category, korumId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [category, korumId, queryClient]);
+
+  return query;
 }
 
 export function usePost(postId: string) {

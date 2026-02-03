@@ -111,10 +111,22 @@ export function useComments(postId: string) {
           table: 'comments',
           filter: `post_id=eq.${postId}`,
         },
-        (payload) => {
-          // Get author profile and refetch comments
+        async (payload) => {
+          // Refetch comments and update post comment count
           queryClient.invalidateQueries({ queryKey: ['comments', postId] });
+          
+          // Update the post's comment count optimistically
+          queryClient.setQueryData(['post', postId], (old: any) => {
+            if (!old) return old;
+            return {
+              ...old,
+              comment_count: (old.comment_count || 0) + 1,
+            };
+          });
+
+          // Also invalidate to ensure fresh data
           queryClient.invalidateQueries({ queryKey: ['post', postId] });
+          queryClient.invalidateQueries({ queryKey: ['posts'] });
         }
       )
       .on(
