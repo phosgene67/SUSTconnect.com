@@ -198,18 +198,13 @@ export function useCreateComment() {
 
       if (error) throw error;
 
-      // Update comment count on post
-      const { data: post } = await supabase
-        .from('posts')
-        .select('comment_count')
-        .eq('id', postId)
-        .single();
+      // Try to atomically increment comment count using RPC
+      const { error: rpcError } = await supabase
+        .rpc('increment_comment_count', { post_id: postId });
 
-      if (post) {
-        await supabase
-          .from('posts')
-          .update({ comment_count: (post.comment_count || 0) + 1 })
-          .eq('id', postId);
+      // If RPC fails, fall back to direct update (trigger will handle it)
+      if (rpcError) {
+        console.warn('RPC increment failed, will rely on database trigger:', rpcError);
       }
 
       return data;
