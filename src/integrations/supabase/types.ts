@@ -437,6 +437,7 @@ export type Database = {
           social_github: string | null
           social_linkedin: string | null
           social_portfolio: string | null
+          theme_preference: string | null
           updated_at: string
           user_id: string
         }
@@ -453,6 +454,7 @@ export type Database = {
           social_github?: string | null
           social_linkedin?: string | null
           social_portfolio?: string | null
+          theme_preference?: string | null
           updated_at?: string
           user_id: string
         }
@@ -469,6 +471,7 @@ export type Database = {
           social_github?: string | null
           social_linkedin?: string | null
           social_portfolio?: string | null
+          theme_preference?: string | null
           updated_at?: string
           user_id?: string
         }

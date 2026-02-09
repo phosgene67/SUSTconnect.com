@@ -16,6 +16,7 @@ interface Profile {
   social_linkedin: string | null;
   social_github: string | null;
   social_portfolio: string | null;
+  theme_preference?: 'light' | 'dark' | 'system' | null;
 }
 
 interface AuthContextType {

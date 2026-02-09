@@ -5,6 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { useTheme } from 'next-themes';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Settings as SettingsIcon, 
   Bell, 
@@ -17,6 +20,24 @@ import {
 
 export default function Settings() {
   const { user, profile, signOut } = useAuth();
+  const { theme, setTheme } = useTheme();
+  const { toast } = useToast();
+
+  const handleThemeChange = async (checked: boolean) => {
+    const nextTheme = checked ? 'dark' : 'light';
+    setTheme(nextTheme);
+
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ theme_preference: nextTheme })
+      .eq('user_id', user.id);
+
+    if (error) {
+      toast({ title: 'Error', description: 'Failed to save theme preference', variant: 'destructive' });
+    }
+  };
 
   if (!user) {
     return (
@@ -141,7 +162,7 @@ export default function Settings() {
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <Sun className="h-5 w-5" />
+              {theme === 'dark' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
               Appearance
             </CardTitle>
             <CardDescription>Customize the look and feel</CardDescription>
@@ -152,7 +173,10 @@ export default function Settings() {
                 <Label>Dark Mode</Label>
                 <p className="text-sm text-muted-foreground">Use dark theme</p>
               </div>
-              <Switch />
+              <Switch
+                checked={theme === 'dark'}
+                onCheckedChange={handleThemeChange}
+              />
             </div>
           </CardContent>
         </Card>
