@@ -65,7 +65,27 @@ export default function AdminDashboard() {
 
   // Check if user is developer
   useEffect(() => {
-    if (user && profile?.user_type !== 'developer') {
+    console.log('AdminDashboard - User:', user?.email);
+    console.log('AdminDashboard - Profile:', profile);
+    console.log('AdminDashboard - User Type:', profile?.user_type);
+    
+    // Wait for profile to load before checking
+    if (!user || profile === undefined) return;
+    
+    // If profile is null after loading, user not found
+    if (profile === null) {
+      toast({
+        title: 'Error',
+        description: 'Profile not found',
+        variant: 'destructive',
+      });
+      window.location.href = '/';
+      return;
+    }
+
+    // Check if user is developer
+    if (profile.user_type !== 'developer') {
+      console.warn('Access denied - not a developer. User type:', profile.user_type);
       toast({
         title: 'Access Denied',
         description: 'Only developers can access this page',
