@@ -634,6 +634,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_vote: {
+        Args: {
+          target_id: string
+          target_type: string
+          value: number
+        }
+        Returns: {
+          upvotes: number
+          downvotes: number
+          user_vote: number
+        }[]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -644,6 +656,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      increment_comment_count: {
+        Args: { post_id: string }
+        Returns: void
       }
     }
     Enums: {

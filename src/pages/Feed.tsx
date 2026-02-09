@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { MainLayout, MobileNav } from '@/components/layout';
 import { usePosts, useVote, Post } from '@/hooks/usePosts';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
 import { formatDistanceToNow } from 'date-fns';
 import { 
   Users, 
@@ -25,6 +26,7 @@ import {
   MessageCircle,
   Bookmark,
   AlertCircle,
+  Search,
 } from 'lucide-react';
 
 const categoryColors: Record<string, string> = {
@@ -279,7 +281,25 @@ function PostCard({ post }: { post: Post }) {
 
 export default function Feed() {
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
-  const { data: posts, isLoading } = usePosts(selectedCategory);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchInput, setSearchInput] = useState(searchParams.get('q') || '');
+  const [debouncedSearch, setDebouncedSearch] = useState(searchInput);
+
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedSearch(searchInput.trim()), 300);
+    return () => clearTimeout(id);
+  }, [searchInput]);
+
+  useEffect(() => {
+    const q = searchInput.trim();
+    if (q) {
+      setSearchParams({ q });
+    } else {
+      setSearchParams({});
+    }
+  }, [searchInput, setSearchParams]);
+
+  const { data: posts, isLoading } = usePosts(selectedCategory, undefined, debouncedSearch || undefined);
   const { data: categoryCounts } = useCategoryCounts();
   const { data: trendingTags } = useTrendingTags();
   const { data: latestAnnouncements } = useLatestAnnouncements();
@@ -313,6 +333,21 @@ export default function Feed() {
                     Explore Korums
                   </Link>
                 </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Search Bar */}
+          <Card>
+            <CardContent className="p-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search posts, titles, or #tags..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  className="pl-9"
+                />
               </div>
             </CardContent>
           </Card>

@@ -54,7 +54,7 @@ function CommentItem({ comment, postId, depth = 0 }: CommentItemProps) {
   const handleVote = (value: 1 | -1) => {
     if (!user) return;
     const newValue = comment.user_vote === value ? 0 : value;
-    vote.mutate({ targetId: comment.id, targetType: 'comment', value: newValue as 1 | -1 | 0 });
+    vote.mutate({ targetId: comment.id, targetType: 'comment', value: newValue as 1 | -1 | 0, postId });
   };
 
   const handleReply = () => {

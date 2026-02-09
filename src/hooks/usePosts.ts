@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { Comment } from '@/hooks/useComments';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 
@@ -26,12 +27,12 @@ export interface Post {
   user_vote?: number;
 }
 
-export function usePosts(category?: string, korumId?: string) {
+export function usePosts(category?: Post['category'], korumId?: string, searchTerm?: string) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ['posts', category, korumId],
+    queryKey: ['posts', category, korumId, searchTerm],
     queryFn: async () => {
       let query = supabase
         .from('posts')
@@ -39,10 +40,21 @@ export function usePosts(category?: string, korumId?: string) {
         .order('created_at', { ascending: false });
 
       if (category) {
-        query = query.eq('category', category as any);
+        query = query.eq('category', category);
       }
       if (korumId) {
         query = query.eq('korum_id', korumId);
+      }
+      if (searchTerm && searchTerm.trim()) {
+        const term = searchTerm.trim();
+        if (term.startsWith('#')) {
+          const tag = term.slice(1).trim();
+          if (tag) {
+            query = query.contains('tags', [tag]);
+          }
+        } else {
+          query = query.or(`title.ilike.%${term}%,content.ilike.%${term}%`);
+        }
       }
 
       const { data: posts, error } = await query;
@@ -94,7 +106,7 @@ export function usePosts(category?: string, korumId?: string) {
           table: 'posts',
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['posts', category, korumId] });
+          queryClient.invalidateQueries({ queryKey: ['posts', category, korumId, searchTerm] });
         }
       )
       .subscribe();
@@ -102,7 +114,7 @@ export function usePosts(category?: string, korumId?: string) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [category, korumId, queryClient]);
+  }, [category, korumId, searchTerm, queryClient]);
 
   return query;
 }
@@ -130,7 +142,7 @@ export function usePost(postId: string) {
         .eq('user_id', post.author_id)
         .single();
 
-      let result: Post = {
+      const result: Post = {
         ...post,
         tags: post.tags || [],
         author: profile || undefined,
@@ -190,7 +202,7 @@ export function useCreatePost() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async (post: { title: string; content: string; category: string; tags?: string[]; korum_id?: string }) => {
+    mutationFn: async (post: { title: string; content: string; category: Post['category']; tags?: string[]; korum_id?: string }) => {
       if (!user) throw new Error('Must be logged in');
 
       const { data, error } = await supabase
@@ -199,7 +211,7 @@ export function useCreatePost() {
           author_id: user.id,
           title: post.title,
           content: post.content,
-          category: post.category as any,
+          category: post.category,
           tags: post.tags || [],
           korum_id: post.korum_id || null,
         })
@@ -224,58 +236,32 @@ export function useVote() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ targetId, targetType, value }: { targetId: string; targetType: 'post' | 'comment'; value: 1 | -1 | 0 }) => {
+    mutationFn: async ({ targetId, targetType, value, postId }: { targetId: string; targetType: 'post' | 'comment'; value: 1 | -1 | 0; postId?: string }) => {
       if (!user) throw new Error('Must be logged in');
 
-      if (value === 0) {
-        // Remove vote
-        const { error } = await supabase
-          .from('votes')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('target_id', targetId)
-          .eq('target_type', targetType);
-        if (error) throw error;
-      } else {
-        // Upsert vote
-        const { error } = await supabase
-          .from('votes')
-          .upsert({
-            user_id: user.id,
-            target_id: targetId,
-            target_type: targetType,
-            value,
-          }, { onConflict: 'user_id,target_id,target_type' });
-        if (error) throw error;
-      }
+      const { data, error } = await supabase
+        .rpc('apply_vote', {
+          target_id: targetId,
+          target_type: targetType,
+          value,
+        });
+      if (error) throw error;
 
-      // Update vote counts on the target
-      const table = targetType === 'post' ? 'posts' : 'comments';
-      const { data: votes } = await supabase
-        .from('votes')
-        .select('value')
-        .eq('target_id', targetId)
-        .eq('target_type', targetType);
-
-      const upvotes = votes?.filter(v => v.value === 1).length || 0;
-      const downvotes = votes?.filter(v => v.value === -1).length || 0;
-
-      await supabase
-        .from(table)
-        .update({ upvotes, downvotes })
-        .eq('id', targetId);
-
-      return { targetId, targetType, upvotes, downvotes };
+      const result = Array.isArray(data) ? data[0] : data;
+      return { targetId, targetType, postId, ...result };
     },
-    onMutate: async ({ targetId, targetType, value }) => {
+    onMutate: async ({ targetId, targetType, value, postId }) => {
       // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: targetType === 'post' ? ['posts'] : ['comments'] });
       await queryClient.cancelQueries({ queryKey: targetType === 'post' ? ['post', targetId] : ['comments'] });
+      if (postId) {
+        await queryClient.cancelQueries({ queryKey: ['comments', postId] });
+      }
 
       // Get previous data
       const postsData = queryClient.getQueryData(['posts']) as Post[] | undefined;
       const postData = queryClient.getQueryData(['post', targetId]) as Post | undefined;
-      const commentsData = queryClient.getQueryData(['comments', targetId]) as any[];
+      const commentsData = postId ? (queryClient.getQueryData(['comments', postId]) as Comment[]) : undefined;
 
       // Optimistically update posts
       if (postsData) {
@@ -309,7 +295,7 @@ export function useVote() {
 
       // Optimistically update comments
       if (commentsData && targetType === 'comment') {
-        const updateComment = (comments: any[]): any[] =>
+        const updateComment = (comments: Comment[]): Comment[] =>
           comments.map(comment => {
             if (comment.id === targetId) {
               const oldVote = comment.user_vote || 0;
@@ -326,10 +312,56 @@ export function useVote() {
             };
           });
 
-        queryClient.setQueryData(['comments', targetId], (old: any[]) => updateComment(old));
+        if (postId) {
+          queryClient.setQueryData(['comments', postId], (old: Comment[] | undefined) => updateComment(old || []));
+        }
       }
 
       return { postsData, postData, commentsData };
+    },
+    onSuccess: (result, variables) => {
+      if (!result) return;
+
+      const { targetId, targetType, postId } = variables;
+      const upvotes = result?.upvotes ?? undefined;
+      const downvotes = result?.downvotes ?? undefined;
+      const userVote = result?.user_vote ?? undefined;
+
+      if (targetType === 'post') {
+        queryClient.setQueryData(['posts'], (old: Post[] | undefined) =>
+          old?.map(post =>
+            post.id === targetId
+              ? { ...post, upvotes: upvotes ?? post.upvotes, downvotes: downvotes ?? post.downvotes, user_vote: userVote ?? post.user_vote }
+              : post
+          )
+        );
+
+        queryClient.setQueryData(['post', targetId], (old: Post | undefined) =>
+          old
+            ? { ...old, upvotes: upvotes ?? old.upvotes, downvotes: downvotes ?? old.downvotes, user_vote: userVote ?? old.user_vote }
+            : old
+        );
+      }
+
+      if (targetType === 'comment' && postId) {
+        const updateComment = (comments: Comment[]): Comment[] =>
+          comments.map(comment => {
+            if (comment.id === targetId) {
+              return {
+                ...comment,
+                upvotes: upvotes ?? comment.upvotes,
+                downvotes: downvotes ?? comment.downvotes,
+                user_vote: userVote ?? comment.user_vote,
+              };
+            }
+            return {
+              ...comment,
+              replies: comment.replies ? updateComment(comment.replies) : undefined,
+            };
+          });
+
+        queryClient.setQueryData(['comments', postId], (old: Comment[] | undefined) => updateComment(old || []));
+      }
     },
     onError: (_, __, context) => {
       // Rollback on error

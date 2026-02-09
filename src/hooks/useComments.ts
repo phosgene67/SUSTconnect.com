@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { Post } from '@/hooks/usePosts';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 
@@ -23,10 +24,12 @@ export interface Comment {
   replies?: Comment[];
 }
 
+type CommentNode = Comment & { replies: CommentNode[] };
+
 // Helper function to build nested comment structure
-const buildNestedComments = (comments: Comment[]): Comment[] => {
-  const commentMap = new Map<string, any>();
-  const rootComments: any[] = [];
+const buildNestedComments = (comments: Comment[]): CommentNode[] => {
+  const commentMap = new Map<string, CommentNode>();
+  const rootComments: CommentNode[] = [];
 
   comments.forEach(comment => {
     commentMap.set(comment.id, { ...comment, replies: [] });
@@ -35,7 +38,7 @@ const buildNestedComments = (comments: Comment[]): Comment[] => {
   comments.forEach(comment => {
     const c = commentMap.get(comment.id)!;
     if (comment.parent_id && commentMap.has(comment.parent_id)) {
-      commentMap.get(comment.parent_id)!.replies!.push(c);
+      commentMap.get(comment.parent_id)!.replies.push(c);
     } else {
       rootComments.push(c);
     }
@@ -116,7 +119,7 @@ export function useComments(postId: string) {
           queryClient.invalidateQueries({ queryKey: ['comments', postId] });
           
           // Update the post's comment count optimistically
-          queryClient.setQueryData(['post', postId], (old: any) => {
+          queryClient.setQueryData(['post', postId], (old: Post | null | undefined) => {
             if (!old) return old;
             return {
               ...old,
