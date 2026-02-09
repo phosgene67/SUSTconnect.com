@@ -21,6 +21,7 @@ import Messages from "./pages/Messages";
 import CreatePost from "./pages/CreatePost";
 import Settings from "./pages/Settings";
 import AdminDashboard from "./pages/AdminDashboard";
+import Debug from "./pages/Debug";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -64,6 +65,7 @@ const App = () => (
             <Route path="/profile/:userId" element={<Profile />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/debug" element={<Debug />} />
             <Route path="/search" element={<Feed />} />
             <Route path="/create-post" element={<CreatePost />} />
             

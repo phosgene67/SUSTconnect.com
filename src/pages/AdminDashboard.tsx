@@ -52,7 +52,7 @@ interface User {
 }
 
 export default function AdminDashboard() {
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -62,6 +62,11 @@ export default function AdminDashboard() {
   const [actionType, setActionType] = useState<'ban' | 'unban' | 'change-type'>('ban');
   const [banReason, setBanReason] = useState('');
   const [newUserType, setNewUserType] = useState<'student' | 'teacher' | 'alumni' | 'developer'>('student');
+
+  // Refresh profile on mount to get latest user_type
+  useEffect(() => {
+    refreshProfile();
+  }, [refreshProfile]);
 
   // Check if user is developer
   useEffect(() => {
