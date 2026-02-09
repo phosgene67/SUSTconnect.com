@@ -245,7 +245,52 @@ export function useVote() {
           target_type: targetType,
           value,
         });
-      if (error) throw error;
+
+      if (error) {
+        // Fallback to legacy vote flow if RPC is not deployed
+        if (error.code === 'PGRST202' || error.message?.toLowerCase().includes('apply_vote')) {
+          if (value === 0) {
+            const { error: deleteError } = await supabase
+              .from('votes')
+              .delete()
+              .eq('user_id', user.id)
+              .eq('target_id', targetId)
+              .eq('target_type', targetType);
+            if (deleteError) throw deleteError;
+          } else {
+            const { error: upsertError } = await supabase
+              .from('votes')
+              .upsert({
+                user_id: user.id,
+                target_id: targetId,
+                target_type: targetType,
+                value,
+              }, { onConflict: 'user_id,target_id,target_type' });
+            if (upsertError) throw upsertError;
+          }
+
+          const table = targetType === 'post' ? 'posts' : 'comments';
+          const { data: votes, error: votesError } = await supabase
+            .from('votes')
+            .select('value')
+            .eq('target_id', targetId)
+            .eq('target_type', targetType);
+          if (votesError) throw votesError;
+
+          const upvotes = votes?.filter(v => v.value === 1).length || 0;
+          const downvotes = votes?.filter(v => v.value === -1).length || 0;
+
+          const { error: updateError } = await supabase
+            .from(table)
+            .update({ upvotes, downvotes })
+            .eq('id', targetId);
+          if (updateError) throw updateError;
+
+          return { targetId, targetType, postId, upvotes, downvotes, user_vote: value };
+        }
+
+        throw error;
+      }
 
       const result = Array.isArray(data) ? data[0] : data;
       return { targetId, targetType, postId, ...result };
@@ -377,7 +422,8 @@ export function useVote() {
           queryClient.setQueryData(['comments', postId], context.commentsData);
         }
       }
-      toast({ title: 'Error', description: 'Failed to update vote', variant: 'destructive' });
+      const message = _ instanceof Error ? _.message : 'Failed to update vote';
+      toast({ title: 'Error', description: message, variant: 'destructive' });
     },
   });
 }
