@@ -52,7 +52,7 @@ interface User {
 }
 
 export default function AdminDashboard() {
-  const { user, profile, refreshProfile } = useAuth();
+  const { user, profile } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -62,43 +62,47 @@ export default function AdminDashboard() {
   const [actionType, setActionType] = useState<'ban' | 'unban' | 'change-type'>('ban');
   const [banReason, setBanReason] = useState('');
   const [newUserType, setNewUserType] = useState<'student' | 'teacher' | 'alumni' | 'developer'>('student');
+  const [isAccessDenied, setIsAccessDenied] = useState(false);
 
-  // Refresh profile on mount to get latest user_type
+  // Check if user is developer - simple check without side effects
   useEffect(() => {
-    refreshProfile();
-  }, [refreshProfile]);
-
-  // Check if user is developer
-  useEffect(() => {
-    console.log('AdminDashboard - User:', user?.email);
-    console.log('AdminDashboard - Profile:', profile);
-    console.log('AdminDashboard - User Type:', profile?.user_type);
+    console.log('AdminDashboard Check - User:', user?.email);
+    console.log('AdminDashboard Check - Profile:', profile);
+    console.log('AdminDashboard Check - User Type:', profile?.user_type);
     
-    // Wait for profile to load before checking
-    if (!user || profile === undefined) return;
-    
-    // If profile is null after loading, user not found
-    if (profile === null) {
-      toast({
-        title: 'Error',
-        description: 'Profile not found',
-        variant: 'destructive',
-      });
-      window.location.href = '/';
+    // Only check after profile is confirmed loaded (not undefined)
+    if (profile === undefined) {
+      console.log('Profile still loading...');
       return;
     }
 
-    // Check if user is developer
+    // If profile is null or user_type is not developer, deny access
+    if (profile === null) {
+      console.warn('Profile is null');
+      setIsAccessDenied(true);
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 1500);
+      return;
+    }
+
     if (profile.user_type !== 'developer') {
-      console.warn('Access denied - not a developer. User type:', profile.user_type);
+      console.warn('Access denied - user_type:', profile.user_type);
+      setIsAccessDenied(true);
       toast({
         title: 'Access Denied',
         description: 'Only developers can access this page',
         variant: 'destructive',
       });
-      window.location.href = '/';
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 1500);
+      return;
     }
-  }, [user, profile]);
+
+    console.log('Access granted - user is developer');
+    setIsAccessDenied(false);
+  }, [profile, user]);
 
   // Fetch all users
   useEffect(() => {
@@ -272,6 +276,16 @@ export default function AdminDashboard() {
       </Badge>
     );
   };
+
+  if (isAccessDenied) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center h-screen">
+          <p className="text-red-600 font-semibold">Access Denied. Redirecting...</p>
+        </div>
+      </MainLayout>
+    );
+  }
 
   if (isLoading) {
     return (
