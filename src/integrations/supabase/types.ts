@@ -440,6 +440,11 @@ export type Database = {
           theme_preference: string | null
           updated_at: string
           user_id: string
+          user_type: string | null
+          status: string | null
+          banned_at: string | null
+          ban_reason: string | null
+          restrictions: Json | null
         }
         Insert: {
           achievements?: string[] | null
@@ -457,6 +462,11 @@ export type Database = {
           theme_preference?: string | null
           updated_at?: string
           user_id: string
+          user_type?: string | null
+          status?: string | null
+          banned_at?: string | null
+          ban_reason?: string | null
+          restrictions?: Json | null
         }
         Update: {
           achievements?: string[] | null
@@ -474,6 +484,11 @@ export type Database = {
           theme_preference?: string | null
           updated_at?: string
           user_id?: string
+          user_type?: string | null
+          status?: string | null
+          banned_at?: string | null
+          ban_reason?: string | null
+          restrictions?: Json | null
         }
         Relationships: []
       }
@@ -649,6 +664,33 @@ export type Database = {
           user_vote: number
         }[]
       }
+      ban_user: {
+        Args: {
+          p_admin_id: string
+          p_target_user_id: string
+          p_reason: string
+        }
+        Returns: void
+      }
+      get_all_users: {
+        Args: {
+          p_user_id: string
+        }
+        Returns: {
+          user_id: string
+          full_name: string
+          email: string
+          avatar_url: string | null
+          department: string
+          batch: string
+          user_type: "student" | "teacher" | "alumni" | "developer"
+          status: "active" | "banned" | "restricted"
+          banned_at: string | null
+          ban_reason: string | null
+          restrictions: string | number | boolean | null | Record<string, string | number | boolean | null>
+          created_at: string
+        }[]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -662,6 +704,29 @@ export type Database = {
       }
       increment_comment_count: {
         Args: { post_id: string }
+        Returns: void
+      }
+      unban_user: {
+        Args: {
+          p_admin_id: string
+          p_target_user_id: string
+        }
+        Returns: void
+      }
+      update_user_restrictions: {
+        Args: {
+          p_admin_id: string
+          p_target_user_id: string
+          p_restrictions: Json
+        }
+        Returns: void
+      }
+      update_user_type: {
+        Args: {
+          p_admin_id: string
+          p_target_user_id: string
+          p_user_type: string
+        }
         Returns: void
       }
     }

@@ -20,6 +20,7 @@ import KorumDetail from "./pages/KorumDetail";
 import Messages from "./pages/Messages";
 import CreatePost from "./pages/CreatePost";
 import Settings from "./pages/Settings";
+import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -62,6 +63,7 @@ const App = () => (
             <Route path="/profile" element={<Profile />} />
             <Route path="/profile/:userId" element={<Profile />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/search" element={<Feed />} />
             <Route path="/create-post" element={<CreatePost />} />
             

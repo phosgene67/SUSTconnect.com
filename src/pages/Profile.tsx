@@ -34,7 +34,11 @@ import {
   FolderKanban,
   ExternalLink,
   Trash2,
+  MoreVertical,
+  Ban,
+  CheckCircle,
 } from 'lucide-react';
+import { RoleBadge } from '@/components/RoleBadge';
 
 export default function Profile() {
   const { userId } = useParams<{ userId: string }>();
@@ -268,7 +272,12 @@ export default function Profile() {
                         className="text-2xl font-bold mb-2"
                       />
                     ) : (
-                      <h1 className="text-2xl font-bold">{profile.full_name}</h1>
+                      <div className="flex items-center gap-3">
+                        <h1 className="text-2xl font-bold">{profile.full_name}</h1>
+                        {profile.user_type && (
+                          <RoleBadge userType={profile.user_type} />
+                        )}
+                      </div>
                     )}
                     <div className="flex flex-wrap items-center gap-4 text-muted-foreground mt-2">
                       <span className="flex items-center gap-1">
@@ -280,6 +289,12 @@ export default function Profile() {
                         Session {profile.batch}
                       </span>
                     </div>
+                    {profile.status && profile.status !== 'active' && (
+                      <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                        <Ban className="h-3 w-3" />
+                        {profile.status === 'banned' ? 'Banned Account' : 'Restricted Account'}
+                      </div>
+                    )}
                   </div>
 
                   {isOwnProfile && (

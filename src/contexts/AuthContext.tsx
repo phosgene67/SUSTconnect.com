@@ -17,6 +17,11 @@ interface Profile {
   social_github: string | null;
   social_portfolio: string | null;
   theme_preference?: 'light' | 'dark' | 'system' | null;
+  user_type?: 'student' | 'teacher' | 'alumni' | 'developer' | null;
+  status?: 'active' | 'banned' | 'restricted' | null;
+  banned_at?: string | null;
+  ban_reason?: string | null;
+  restrictions?: Record<string, any> | null;
 }
 
 interface AuthContextType {
