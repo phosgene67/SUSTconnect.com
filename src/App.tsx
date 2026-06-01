@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthProvider";
 import { useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider, useTheme } from "next-themes";
 import { useEffect } from "react";
+import { Analytics } from "@vercel/analytics/react";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -44,6 +45,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <Analytics />
         <BrowserRouter>
           <AuthProvider>
             <ThemeSync />
