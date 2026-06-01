@@ -402,97 +402,17 @@ export default function Profile() {
               <Card className="rounded-3xl border border-gray-200 shadow-sm">
                 <CardHeader className="pb-4">
                   <CardTitle className="flex items-center gap-2 text-base">
-                    <Sparkles className="h-4 w-4 text-red-800" />
-                    Core Skills & Expertise
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-5">
-                  <div className="flex flex-wrap gap-2">
-                    {(isEditing ? editForm.skills : profile.skills || []).map(skill => (
-                      <Badge key={skill} variant="secondary" className="flex items-center gap-1 rounded-full px-3 py-1">
-                        {skill}
-                        {isEditing && (
-                          <button onClick={() => removeSkill(skill)} className="ml-1 hover:text-destructive">
-                            <X className="h-3 w-3" />
-                          </button>
-                        )}
-                      </Badge>
-                    ))}
-                    {isEditing && (
-                      <div className="flex w-full items-center gap-2">
-                        <Input
-                          value={newSkill}
-                          onChange={e => setNewSkill(e.target.value)}
-                          placeholder="Add skill"
-                          className="h-9 flex-1"
-                          onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addSkill())}
-                        />
-                        <Button size="sm" variant="outline" className="rounded-xl" onClick={addSkill}>
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    )}
-                    {!isEditing && (!profile.skills || profile.skills.length === 0) && (
-                      <span className="text-sm text-muted-foreground">No skills added yet.</span>
-                    )}
-                  </div>
-
-                  <Separator />
-
-                  <div>
-                    <div className="mb-3 flex items-center justify-between gap-3">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400">Achievements</h3>
-                      {!isEditing && (
-                        <span className="text-xs text-muted-foreground">
-                          {profile.achievements?.length || 0} items
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {(isEditing ? editForm.achievements : profile.achievements || []).map(achievement => (
-                        <Badge key={achievement} className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-red-800 hover:bg-red-50">
-                          {achievement}
-                          {isEditing && (
-                            <button onClick={() => removeAchievement(achievement)} className="ml-2 hover:text-red-950">
-                              <X className="h-3 w-3" />
-                            </button>
-                          )}
-                        </Badge>
-                      ))}
-                      {isEditing && (
-                        <div className="flex w-full items-center gap-2">
-                          <Input
-                            value={newAchievement}
-                            onChange={e => setNewAchievement(e.target.value)}
-                            placeholder="Add achievement"
-                            className="h-9 flex-1"
-                            onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addAchievement())}
-                          />
-                          <Button size="sm" variant="outline" className="rounded-xl" onClick={addAchievement}>
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
-                      {!isEditing && (!profile.achievements || profile.achievements.length === 0) && (
-                        <span className="text-sm text-muted-foreground">No achievements yet.</span>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="rounded-3xl border border-gray-200 shadow-sm">
-                <CardHeader className="pb-4">
-                  <CardTitle className="flex items-center gap-2 text-base">
                     <Mail className="h-4 w-4 text-red-800" />
-                    Contact & Links
+                    Contact List
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-3 text-sm text-gray-600">
-                    <div className="flex items-center gap-3">
-                      <Mail className="h-4 w-4 text-gray-400" />
-                      <span className="truncate">{contactEmail || 'Available in your account session'}</span>
+                    <div className="flex items-start gap-3">
+                      <Mail className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
+                      <span className="break-all font-medium text-gray-900">
+                        {contactEmail || 'Available in your account session'}
+                      </span>
                     </div>
                     <div className="flex items-center gap-3">
                       <GraduationCap className="h-4 w-4 text-gray-400" />
@@ -578,6 +498,89 @@ export default function Profile() {
                   )}
                 </CardContent>
               </Card>
+
+              <Card className="rounded-3xl border border-gray-200 shadow-sm">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Sparkles className="h-4 w-4 text-red-800" />
+                    Core Skills & Expertise
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-5">
+                  <div className="flex flex-wrap gap-2">
+                    {(isEditing ? editForm.skills : profile.skills || []).map(skill => (
+                      <Badge key={skill} variant="secondary" className="flex items-center gap-1 rounded-full px-3 py-1">
+                        {skill}
+                        {isEditing && (
+                          <button onClick={() => removeSkill(skill)} className="ml-1 hover:text-destructive">
+                            <X className="h-3 w-3" />
+                          </button>
+                        )}
+                      </Badge>
+                    ))}
+                    {isEditing && (
+                      <div className="flex w-full items-center gap-2">
+                        <Input
+                          value={newSkill}
+                          onChange={e => setNewSkill(e.target.value)}
+                          placeholder="Add skill"
+                          className="h-9 flex-1"
+                          onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addSkill())}
+                        />
+                        <Button size="sm" variant="outline" className="rounded-xl" onClick={addSkill}>
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                    {!isEditing && (!profile.skills || profile.skills.length === 0) && (
+                      <span className="text-sm text-muted-foreground">No skills added yet.</span>
+                    )}
+                  </div>
+
+                  <Separator />
+
+                  <div>
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400">Achievements</h3>
+                      {!isEditing && (
+                        <span className="text-xs text-muted-foreground">
+                          {profile.achievements?.length || 0} items
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {(isEditing ? editForm.achievements : profile.achievements || []).map(achievement => (
+                        <Badge key={achievement} className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-red-800 hover:bg-red-50">
+                          {achievement}
+                          {isEditing && (
+                            <button onClick={() => removeAchievement(achievement)} className="ml-2 hover:text-red-950">
+                              <X className="h-3 w-3" />
+                            </button>
+                          )}
+                        </Badge>
+                      ))}
+                      {isEditing && (
+                        <div className="flex w-full items-center gap-2">
+                          <Input
+                            value={newAchievement}
+                            onChange={e => setNewAchievement(e.target.value)}
+                            placeholder="Add achievement"
+                            className="h-9 flex-1"
+                            onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addAchievement())}
+                          />
+                          <Button size="sm" variant="outline" className="rounded-xl" onClick={addAchievement}>
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                      {!isEditing && (!profile.achievements || profile.achievements.length === 0) && (
+                        <span className="text-sm text-muted-foreground">No achievements yet.</span>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
             </aside>
 
             <main className="space-y-6 lg:col-span-8 xl:col-span-9">
