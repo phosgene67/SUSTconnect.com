@@ -65,33 +65,7 @@ export const KORUM_TYPES = {
 
 // Departments list
 export const DEPARTMENTS = [
-  'Computer Science & Engineering',
-  'Electrical & Electronic Engineering',
-  'Civil Engineering',
-  'Mechanical Engineering',
-  'Industrial & Production Engineering',
-  'Chemical Engineering',
-  'Food Engineering & Tea Technology',
-  'Architecture',
-  'Physics',
-  'Chemistry',
-  'Mathematics',
-  'Statistics',
-  'Economics',
-  'Business Administration',
-  'English',
-  'Bangla',
-  'Sociology',
-  'Political Science',
-  'Public Administration',
-  'Anthropology',
-  'Social Work',
-  'Geography & Environment',
-  'Genetic Engineering & Biotechnology',
-  'Biochemistry & Molecular Biology',
-  'Forestry & Environmental Science',
-  'Petroleum & Mining Engineering',
-  'Oceanography',
+  'Electrical & Electronics Engineering',
 ] as const;
 
 // Session years (dynamic, last 10 sessions in format YYYY-YYYY)

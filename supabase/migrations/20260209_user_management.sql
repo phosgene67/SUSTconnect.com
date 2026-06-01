@@ -32,8 +32,8 @@ AS $$
 BEGIN
   -- Check if user is developer
   IF NOT EXISTS (
-    SELECT 1 FROM user_roles 
-    WHERE user_id = p_user_id AND role = 'developer'
+    SELECT 1 FROM profiles 
+    WHERE user_id = p_user_id AND user_type = 'developer'
   ) THEN
     RAISE EXCEPTION 'Only developers can access user management';
   END IF;
@@ -67,8 +67,8 @@ AS $$
 BEGIN
   -- Check if admin is developer
   IF NOT EXISTS (
-    SELECT 1 FROM user_roles 
-    WHERE user_id = p_admin_id AND role = 'developer'
+    SELECT 1 FROM profiles 
+    WHERE user_id = p_admin_id AND user_type = 'developer'
   ) THEN
     RAISE EXCEPTION 'Only developers can ban users';
   END IF;
@@ -92,8 +92,8 @@ AS $$
 BEGIN
   -- Check if admin is developer
   IF NOT EXISTS (
-    SELECT 1 FROM user_roles 
-    WHERE user_id = p_admin_id AND role = 'developer'
+    SELECT 1 FROM profiles 
+    WHERE user_id = p_admin_id AND user_type = 'developer'
   ) THEN
     RAISE EXCEPTION 'Only developers can unban users';
   END IF;
@@ -117,8 +117,8 @@ AS $$
 BEGIN
   -- Check if admin is developer
   IF NOT EXISTS (
-    SELECT 1 FROM user_roles 
-    WHERE user_id = p_admin_id AND role = 'developer'
+    SELECT 1 FROM profiles 
+    WHERE user_id = p_admin_id AND user_type = 'developer'
   ) THEN
     RAISE EXCEPTION 'Only developers can update user types';
   END IF;
@@ -144,8 +144,8 @@ AS $$
 BEGIN
   -- Check if admin is developer
   IF NOT EXISTS (
-    SELECT 1 FROM user_roles 
-    WHERE user_id = p_admin_id AND role = 'developer'
+    SELECT 1 FROM profiles 
+    WHERE user_id = p_admin_id AND user_type = 'developer'
   ) THEN
     RAISE EXCEPTION 'Only developers can update restrictions';
   END IF;
