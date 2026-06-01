@@ -57,7 +57,7 @@ export default function CreatePost() {
   }, [searchParams]);
 
   // Show loading state while auth is initializing
-  if (loading) {
+  if (isLoading) {
     return (
       <MainLayout>
         <div className="max-w-2xl mx-auto">
