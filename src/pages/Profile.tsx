@@ -249,8 +249,8 @@ export default function Profile() {
   const profileStats = [
     { label: 'Projects', value: projects?.length || 0, icon: FolderKanban },
     { label: 'Research', value: research?.length || 0, icon: FileText },
-    { label: 'Skills', value: profile.skills?.length || 0, icon: Sparkles },
-    { label: 'Achievements', value: profile.achievements?.length || 0, icon: Award },
+    { label: 'Skills', value: profile?.skills?.length || 0, icon: Sparkles },
+    { label: 'Achievements', value: profile?.achievements?.length || 0, icon: Award },
   ];
 
   if (isLoading) {
