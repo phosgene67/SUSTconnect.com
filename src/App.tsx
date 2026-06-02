@@ -28,20 +28,26 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const ThemeSync = () => {
-  const { profile } = useAuth();
+  const { user, profile, isLoading } = useAuth();
   const { setTheme } = useTheme();
 
   useEffect(() => {
-    if (!profile?.theme_preference) return;
-    setTheme(profile.theme_preference);
-  }, [profile?.theme_preference, setTheme]);
+    if (isLoading) return;
+
+    if (!user) {
+      setTheme("light");
+      return;
+    }
+
+    setTheme(profile?.theme_preference ?? "light");
+  }, [isLoading, profile?.theme_preference, setTheme, user]);
 
   return null;
 };
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+    <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
       <TooltipProvider>
         <Toaster />
         <Sonner />

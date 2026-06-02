@@ -61,7 +61,6 @@ const categoryIconColors: Record<string, string> = {
   resource: 'bg-pink-500/10 text-pink-500',
 };
 
-// Hook to fetch category counts
 function useCategoryCounts() {
   return useQuery({
     queryKey: ['category-counts'],
@@ -81,7 +80,6 @@ function useCategoryCounts() {
   });
 }
 
-// Hook to fetch trending tags
 function useTrendingTags() {
   return useQuery({
     queryKey: ['trending-tags'],
@@ -108,7 +106,6 @@ function useTrendingTags() {
   });
 }
 
-// Hook to fetch latest announcements
 function useLatestAnnouncements() {
   return useQuery({
     queryKey: ['latest-announcements'],
@@ -133,7 +130,6 @@ function PostCard({ post }: { post: Post }) {
   const queryClient = useQueryClient();
   const score = (post.upvotes || 0) - (post.downvotes || 0);
 
-  // Check if post is saved
   const { data: isSaved } = useQuery({
     queryKey: ['saved-post', post.id, user?.id],
     queryFn: async () => {
@@ -183,7 +179,6 @@ function PostCard({ post }: { post: Post }) {
     <Card className="hover:shadow-md transition-shadow">
       <CardContent className="p-4">
         <div className="flex gap-4">
-          {/* Vote buttons */}
           <div className="flex flex-col items-center gap-1">
             <Button
               variant="ghost"
@@ -206,9 +201,7 @@ function PostCard({ post }: { post: Post }) {
             </Button>
           </div>
 
-          {/* Content */}
           <div className="flex-1 min-w-0">
-            {/* Category & Author */}
             <div className="flex items-center gap-2 mb-2">
               <Badge variant="secondary" className={categoryColors[post.category] || ''}>
                 {categoryLabels[post.category] || post.category}
@@ -229,19 +222,16 @@ function PostCard({ post }: { post: Post }) {
               </span>
             </div>
 
-            {/* Title */}
             <Link to={`/post/${post.id}`}>
               <h3 className="font-semibold text-lg mb-2 line-clamp-2 hover:text-primary cursor-pointer">
                 {post.title}
               </h3>
             </Link>
 
-            {/* Content preview */}
             <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
               {post.content}
             </p>
 
-            {/* Tags */}
             {post.tags && post.tags.length > 0 && (
               <div className="flex flex-wrap gap-1 mb-3">
                 {post.tags.slice(0, 3).map(tag => (
@@ -252,7 +242,6 @@ function PostCard({ post }: { post: Post }) {
               </div>
             )}
 
-            {/* Actions */}
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="sm" className="h-8 text-muted-foreground" asChild>
                 <Link to={`/post/${post.id}`}>
@@ -280,6 +269,7 @@ function PostCard({ post }: { post: Post }) {
 }
 
 export default function Feed() {
+  const { user } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchInput, setSearchInput] = useState(searchParams.get('q') || '');
@@ -309,61 +299,7 @@ export default function Feed() {
   return (
     <MainLayout>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Feed Area */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Welcome Card */}
-          <Card className="bg-gradient-to-r from-primary/5 to-accent/5 border-primary/20">
-            <CardHeader>
-              <CardTitle className="text-xl">Welcome to SUST Connect! 🎓</CardTitle>
-              <CardDescription>
-                Connect with your peers, share knowledge, and grow together.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                <Button asChild>
-                  <Link to="/create-post">
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Create Post
-                  </Link>
-                </Button>
-                <Button variant="outline" asChild>
-                  <Link to="/korums">
-                    <Users className="mr-2 h-4 w-4" />
-                    Explore Korums
-                  </Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Search Bar */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search posts, titles, or #tags..."
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Filter Bar */}
-          {selectedCategory && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Filtering by:</span>
-              <Badge variant="secondary">{categoryLabels[selectedCategory]}</Badge>
-              <Button variant="ghost" size="sm" onClick={() => setSelectedCategory(undefined)}>
-                Clear
-              </Button>
-            </div>
-          )}
-
-          {/* Posts */}
           {isLoading ? (
             <div className="space-y-4">
               {[1, 2, 3].map(i => (
@@ -394,9 +330,7 @@ export default function Feed() {
           )}
         </div>
 
-        {/* Sidebar Content */}
         <div className="space-y-6">
-          {/* Categories */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Browse by Category</CardTitle>
@@ -426,7 +360,6 @@ export default function Feed() {
             </CardContent>
           </Card>
 
-          {/* Trending Tags */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
@@ -457,7 +390,6 @@ export default function Feed() {
             </CardContent>
           </Card>
 
-          {/* Announcements Preview */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
@@ -488,15 +420,11 @@ export default function Feed() {
                   No announcements at the moment.
                 </p>
               )}
-              <Button variant="link" className="px-0 mt-2" asChild>
-                <Link to="/announcements">View all announcements →</Link>
-              </Button>
             </CardContent>
           </Card>
         </div>
       </div>
 
-      {/* Mobile Navigation */}
       <MobileNav />
     </MainLayout>
   );

@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
+import { CreatePostDialogHost } from '@/components/CreatePostDialog';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -9,6 +10,7 @@ interface MainLayoutProps {
 export function MainLayout({ children }: MainLayoutProps) {
   return (
     <div className="flex h-screen overflow-hidden bg-background">
+      <CreatePostDialogHost />
       {/* Desktop Sidebar */}
       <Sidebar />
       

@@ -16,6 +16,7 @@ import { APP_NAME } from '@/lib/constants';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { openCreatePostDialog } from '@/components/CreatePostDialog';
 import logo from '@/assets/logo.png';
 
 const navigation = [
@@ -71,13 +72,14 @@ export function Sidebar() {
       {/* Create Post Button */}
       {user && (
         <div className="px-4 pb-2">
-          <Link
-            to="/create-post"
+          <button
+            type="button"
+            onClick={() => openCreatePostDialog()}
             className="flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
           >
             <PlusCircle className="h-4 w-4" />
             <span>Create Post</span>
-          </Link>
+          </button>
         </div>
       )}
 

@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useImageUpload } from '@/hooks/useImageUpload';
 import { ImageUpload } from '@/components/ImageUpload';
+import { openCreatePostDialog } from '@/components/CreatePostDialog';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -471,8 +472,8 @@ export default function KorumDetail() {
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle>Recent Posts</CardTitle>
                   {(!korum.admin_only_posting || isAdmin || isModerator) && (
-                    <Button asChild size="sm">
-                      <Link to={`/create-post?korum=${korumId}`}>Create Post</Link>
+                    <Button size="sm" onClick={() => openCreatePostDialog(korumId)}>
+                      Create Post
                     </Button>
                   )}
                 </CardHeader>
